@@ -18,4 +18,5 @@ This project meets all functional and technical requirements of the assignment (
 ## Note：
 
 The download commands for the plugins required for this project; if the necessary plugins are not installed, some features may malfunction or fail to display.
+
 ————  npm install chart.js vue-chartjs
