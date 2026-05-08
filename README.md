@@ -15,7 +15,7 @@ A web application built with **Vue 3**, **Bootstrap**that provides a collaborati
 
 This project meets all functional and technical requirements of the assignment (at least 10 interconnected pages, search/sort, user‑generated content, social features, etc.).
 
-## note：
+## Note：
 
 The download commands for the plugins required for this project; if the necessary plugins are not installed, some features may malfunction or fail to display.
 ————  npm install chart.js vue-chartjs
