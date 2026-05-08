@@ -1,5 +1,16 @@
-# Vue 3 + Vite
+# Student Hub – Canvas‑like Communication Platform
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+A web application built with **Vue 3**, **Bootstrap**that provides a collaborative environment for students. The platform combines course management, interactive discussions, and personal scheduling.
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## Key Features
+
+- **User authentication** – Register, login, and role‑based content visibility.
+- **Course & activity browsing** – View available courses with search, sorting, and pagination.
+- **Course details** – Each course has its own detailed page.
+- **Discussion / Help forum** – Create, edit, delete posts; search and sort threads.
+- **Social interaction** – Like posts to show appreciation.
+- **Personal timetable** – Display your enrolled courses in a weekly schedule.
+- **Fully responsive** – Mobile‑first design using Bootstrap grid system.
+- **Persistent data** – Backed by a database and RESTful API.
+
+This project meets all functional and technical requirements of the assignment (at least 10 interconnected pages, search/sort, user‑generated content, social features, etc.).
