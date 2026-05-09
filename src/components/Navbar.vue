@@ -1,3 +1,7 @@
+<script setup>
+import { selectionStore } from '../store/selection'
+</script>
+
 <template>
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
     <div class="container">
@@ -12,9 +16,32 @@
           <li class="nav-item">
             <router-link class="nav-link" to="/">Home</router-link>
           </li>
-          <li class="nav-item">
-            <router-link class="nav-link" to="/courses">Courses</router-link>
+          
+          <!-- Courses Dropdown with Hover functionality -->
+          <li class="nav-item dropdown course-dropdown">
+            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              Courses
+              <span v-if="selectionStore.enrolledUnits.length > 0" class="badge bg-primary ms-2 rounded-pill small">
+                {{ selectionStore.enrolledUnits.length }}
+              </span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-dark shadow" aria-labelledby="navbarDropdown">
+              <li>
+                <router-link class="dropdown-item py-2" to="/courses">
+                  Course Catalogue
+                </router-link>
+              </li>
+              <li>
+                <router-link class="dropdown-item py-2 d-flex justify-content-between align-items-center" to="/my-selection">
+                  <span>My Selection</span>
+                  <span v-if="selectionStore.enrolledUnits.length > 0" class="badge bg-primary rounded-pill ms-2">
+                    {{ selectionStore.enrolledUnits.length }}
+                  </span>
+                </router-link>
+              </li>
+            </ul>
           </li>
+
           <li class="nav-item">
             <router-link class="nav-link" to="/forum">Forum</router-link>
           </li>
@@ -30,3 +57,33 @@
     </div>
   </nav>
 </template>
+
+<style scoped>
+.badge {
+  font-size: 0.65rem;
+  padding: 0.35em 0.65em;
+}
+
+/* CSS for Hover Dropdown functionality */
+@media (min-width: 992px) {
+  .course-dropdown:hover .dropdown-menu {
+    display: block;
+    margin-top: 0; /* remove the gap so hover doesn't flicker */
+  }
+}
+
+.dropdown-item {
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-menu {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 0.5rem 0;
+}
+</style>

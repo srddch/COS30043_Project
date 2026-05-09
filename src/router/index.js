@@ -11,6 +11,7 @@ const routes = [
   { path: '/login', name: 'Login', component: () => import('../views/User/Login.vue') },
   // 成员 3: 课程系统预留
   { path: '/courses', name: 'Courses', component: () => import('../views/Course/CourseList.vue') },
+  { path: '/my-selection', name: 'MySelection', component: () => import('../views/Course/MySelection.vue') },
   // 成员 4: 论坛系统预留
   { path: '/forum', name: 'Forum', component: () => import('../views/Forum/ForumMain.vue') },
   // 成员 5: 社交/课表预留
