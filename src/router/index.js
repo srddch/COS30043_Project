@@ -14,6 +14,10 @@ const routes = [
   { path: '/my-selection', name: 'MySelection', component: () => import('../views/Course/MySelection.vue') },
   // 成员 4: 论坛系统预留
   { path: '/forum', name: 'Forum', component: () => import('../views/Forum/ForumMain.vue') },
+  { path: '/forum/create', name: 'CreatePost', component: () => import('../views/Forum/CreatePost.vue') },
+  { path: '/forum/:id/edit', name: 'EditPost', component: () => import('../views/Forum/EditPost.vue') },
+  { path: '/forum/:id', name: 'PostDetail', component: () => import('../views/Forum/PostDetail.vue') },
+
   // 成员 5: 社交/课表预留
   { path: '/schedule', name: 'Schedule', component: () => import('../views/Social/Schedule.vue') },
   // 成员 1: 404 页面
