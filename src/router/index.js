@@ -1,6 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import Home from '../views/Home.vue';
-
+//成员5
+import MyLikes from '../views/Social/MyLikes.vue'
+import MyRatings from '../views/Social/MyRatings.vue'
+import Schedule from '../views/Social/Schedule.vue'
+import SocialDashboard from '../views/Social/SocialDashboard.vue'
 const routes = [
   {
     path: '/',
@@ -19,9 +23,30 @@ const routes = [
   { path: '/forum/:id', name: 'PostDetail', component: () => import('../views/Forum/PostDetail.vue') },
 
   // 成员 5: 社交/课表预留
-  { path: '/schedule', name: 'Schedule', component: () => import('../views/Social/Schedule.vue') },
-  // 成员 1: 404 页面
   {
+  path: '/social/likes',
+  name: 'MyLikes',
+  component: MyLikes
+},
+{
+  path: '/social/ratings',
+  name: 'MyRatings',
+  component: MyRatings
+},
+{
+  path: '/social/schedule',
+  name: 'Schedule',
+  component: Schedule
+},
+{
+  path: '/social/dashboard',
+  name: 'SocialDashboard',
+  component: SocialDashboard
+},
+  
+  
+// 成员 1: 404 页面
+ {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: () => import('../views/NotFound.vue')

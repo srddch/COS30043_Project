@@ -294,3 +294,29 @@ code {
     border-right-color: var(--border);
   }
 }
+
+body {
+  background-color: #f8f9fa;
+}
+
+.card {
+  border: none;
+  border-radius: 16px;
+}
+
+.btn {
+  border-radius: 10px;
+}
+
+.progress {
+  height: 18px;
+  border-radius: 20px;
+}
+
+.progress-bar {
+  border-radius: 20px;
+}
+
+.table {
+  margin-bottom: 0;
+}

@@ -13,6 +13,7 @@ import { selectionStore } from '../store/selection'
 
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav me-auto">
+     
           <li class="nav-item">
             <router-link class="nav-link" to="/">Home</router-link>
           </li>
@@ -42,6 +43,58 @@ import { selectionStore } from '../store/selection'
             </ul>
           </li>
 
+          <li class="nav-item dropdown">
+  <a
+    class="nav-link dropdown-toggle"
+    href="#"
+    id="socialDropdown"
+    role="button"
+    data-bs-toggle="dropdown"
+    aria-expanded="false"
+  >
+    Social
+  </a>
+
+  <ul class="dropdown-menu dropdown-menu-dark shadow">
+
+    <li>
+      <RouterLink
+        class="dropdown-item py-2"
+        to="/social/likes"
+      >
+        Likes & Favourites
+      </RouterLink>
+    </li>
+
+    <li>
+      <RouterLink
+        class="dropdown-item py-2"
+        to="/social/ratings"
+      >
+        My Ratings
+      </RouterLink>
+    </li>
+
+    <li>
+      <RouterLink
+        class="dropdown-item py-2"
+        to="/social/schedule"
+      >
+        Auto Schedule
+      </RouterLink>
+    </li>
+
+    <li>
+      <RouterLink
+        class="dropdown-item py-2"
+        to="/social/dashboard"
+      >
+        Activity Dashboard
+      </RouterLink>
+    </li>
+
+  </ul>
+</li>
           <li class="nav-item">
             <router-link class="nav-link" to="/forum">Forum</router-link>
           </li>
