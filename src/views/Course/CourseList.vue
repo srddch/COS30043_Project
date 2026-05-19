@@ -1,14 +1,28 @@
 <script setup>
 import { ref, computed, onMounted, inject } from 'vue'
-import unitsData from '../../assets/units.json'
+import api from '../../services/api'
 import { selectionStore } from '../../store/selection'
 
 const notify = inject('notify')
 
 const units = ref([])
+const loading = ref(true)
 const selectedUnit = ref(null)
 const searchQuery = ref('')
 const categoryFilter = ref('all')
+
+const fetchUnits = async () => {
+  loading.value = true
+  try {
+    const response = await api.get('/courses')
+    units.value = response.data
+  } catch (error) {
+    console.error('Error fetching courses:', error)
+    notify('Failed to load courses from backend', 'bg-danger')
+  } finally {
+    loading.value = false
+  }
+}
 
 const categories = [
   { value: 'all', label: 'All Categories' },
@@ -76,7 +90,7 @@ const getEnrollmentPercent = (unit) => {
 }
 
 onMounted(() => {
-  units.value = unitsData
+  fetchUnits()
 })
 </script>
 
@@ -118,7 +132,13 @@ onMounted(() => {
             <span class="badge bg-primary rounded-pill">{{ filteredUnits.length }}</span>
           </div>
           <div class="card-body p-0" style="max-height: 600px; overflow-y: auto;">
-            <div v-if="filteredUnits.length === 0" class="text-center py-5">
+            <div v-if="loading" class="text-center py-5">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <p class="mt-2 text-muted">Fetching units...</p>
+            </div>
+            <div v-else-if="filteredUnits.length === 0" class="text-center py-5">
               <p class="text-muted">No units found</p>
             </div>
             <div v-else>
