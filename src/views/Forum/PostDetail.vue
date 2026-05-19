@@ -1,7 +1,11 @@
 <script setup>
-import { computed, inject } from 'vue'
+import { ref, computed, inject, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { forumPosts } from './forumData'
+import {
+  getForumPostById,
+  getForumPosts,
+  deleteForumPost
+} from '../../services/forumPostService'
 import { isLoggedIn, currentUser } from './forumAuthMock'
 
 const route = useRoute()
@@ -12,9 +16,45 @@ const postId = computed(() => {
   return Number(route.params.id)
 })
 
-const post = computed(() => {
-  return forumPosts.find(item => item.id === postId.value)
+const post = ref(null)
+const allPosts = ref([])
+const isLoading = ref(false)
+const errorMessage = ref('')
+
+const loadPost = async () => {
+  try {
+    isLoading.value = true
+    errorMessage.value = ''
+    post.value = null
+    allPosts.value = []
+
+    const [postData, postsData] = await Promise.all([
+      getForumPostById(postId.value),
+      getForumPosts()
+    ])
+
+    post.value = postData
+    allPosts.value = postsData
+  } catch (error) {
+    console.error('Failed to load forum post:', error)
+    post.value = null
+    allPosts.value = []
+    errorMessage.value = 'Post not found or failed to load.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(() => {
+  loadPost()
 })
+
+watch(
+  () => route.params.id,
+  () => {
+    loadPost()
+  }
+)
 
 const canManagePost = computed(() => {
   return isLoggedIn && post.value && post.value.author === currentUser
@@ -59,7 +99,7 @@ const relatedPosts = computed(() => {
     return []
   }
 
-  return forumPosts
+  return allPosts.value
     .filter(candidatePost => candidatePost.id !== post.value.id)
     .map(candidatePost => ({
       ...candidatePost,
@@ -96,30 +136,35 @@ const formatRelativeTime = (createdAt) => {
   return createdTime.toLocaleDateString()
 }
 
+const deletePost = async () => {
+  if (!canManagePost.value) {
+    if (notify) {
+      notify('You do not have permission to delete this post.', 'bg-danger')
+    }
+    return
+  }
 
-const deletePost = () => {
   const confirmed = window.confirm('Are you sure you want to delete this post?')
 
   if (!confirmed) {
     return
   }
 
-  const postIndex = forumPosts.findIndex(item => item.id === postId.value)
+  try {
+    await deleteForumPost(postId.value)
 
-  if (postIndex === -1) {
     if (notify) {
-      notify('Post not found.', 'bg-danger')
+      notify('Post deleted successfully!', 'bg-success')
     }
-    return
+
+    router.push('/forum')
+  } catch (error) {
+    console.error('Failed to delete post:', error)
+
+    if (notify) {
+      notify('Failed to delete post.', 'bg-danger')
+    }
   }
-
-  forumPosts.splice(postIndex, 1)
-
-  if (notify) {
-    notify('Post deleted successfully!', 'bg-success')
-  }
-
-  router.push('/forum')
 }
 </script>
 
@@ -129,7 +174,16 @@ const deletePost = () => {
       ← Back to Forum
     </router-link>
 
-    <div v-if="post" class="card border-0 shadow-sm">
+    <div v-if="isLoading" class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <div class="spinner-border text-success mb-3" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted mb-0">Loading post details...</p>
+      </div>
+    </div>
+
+    <div v-else-if="post" class="card border-0 shadow-sm">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start mb-3">
           <span class="badge bg-light text-dark border">
@@ -154,18 +208,31 @@ const deletePost = () => {
         </p>
 
         <div class="d-flex flex-wrap gap-2 mb-4">
-          <span v-for="tag in post.tags" :key="tag" class="badge bg-secondary-subtle text-secondary border">
+          <span
+            v-for="tag in post.tags"
+            :key="tag"
+            class="badge bg-secondary-subtle text-secondary border"
+          >
             #{{ tag }}
           </span>
         </div>
 
         <div class="border-top pt-3">
-          <div v-if="canManagePost" class="d-flex flex-column flex-sm-row justify-content-end gap-2 gap-sm-3">
-            <router-link :to="`/forum/${post.id}/edit`" class="btn btn-outline-primary btn-sm">
+          <div
+            v-if="canManagePost"
+            class="d-flex flex-column flex-sm-row justify-content-end gap-2 gap-sm-3"
+          >
+            <router-link
+              :to="`/forum/${post.id}/edit`"
+              class="btn btn-outline-primary btn-sm"
+            >
               Edit Post
             </router-link>
 
-            <button class="btn btn-outline-danger btn-sm" @click="deletePost">
+            <button
+              class="btn btn-outline-danger btn-sm"
+              @click="deletePost"
+            >
               Delete Post
             </button>
           </div>
@@ -174,6 +241,7 @@ const deletePost = () => {
             You can view this post, but only the author can edit or delete it.
           </p>
         </div>
+
         <div class="border-top pt-4 mt-4">
           <div class="d-flex justify-content-between align-items-center mb-2">
             <h2 class="h5 fw-bold mb-0">Related Discussions</h2>
@@ -184,8 +252,15 @@ const deletePost = () => {
           </p>
 
           <div v-if="relatedPosts.length > 0" class="row g-3">
-            <div v-for="related in relatedPosts" :key="related.id" class="col-md-4">
-              <router-link :to="`/forum/${related.id}`" class="text-decoration-none">
+            <div
+              v-for="related in relatedPosts"
+              :key="related.id"
+              class="col-md-4"
+            >
+              <router-link
+                :to="`/forum/${related.id}`"
+                class="text-decoration-none"
+              >
                 <div class="card h-100 border related-card">
                   <div class="card-body">
                     <span class="badge bg-light text-dark border mb-2">
@@ -213,8 +288,6 @@ const deletePost = () => {
             No related discussions found.
           </p>
         </div>
-
-
       </div>
     </div>
 
@@ -236,6 +309,7 @@ const deletePost = () => {
 .post-detail-page {
   text-align: left;
 }
+
 .related-card {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }

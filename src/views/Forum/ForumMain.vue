@@ -1,10 +1,13 @@
 <script setup>
-import { ref, computed, inject } from 'vue'
-import { forumPosts } from './forumData'
+import { ref, computed, inject, onMounted } from 'vue'
+import { getForumPosts } from '../../services/forumPostService'
 import { isLoggedIn } from './forumAuthMock'
 import PostCard from './components/PostCard.vue'
 
 const notify = inject('notify')
+const forumPosts = ref([])
+const isLoading = ref(false)
+const errorMessage = ref('')
 
 const searchText = ref('')
 const selectedCategory = ref('All')
@@ -12,6 +15,27 @@ const sortBy = ref('latest')
 const currentPage = ref(1)
 const pageSize = 4
 
+const loadForumPosts = async () => {
+  try {
+    isLoading.value = true
+    errorMessage.value = ''
+
+    forumPosts.value = await getForumPosts()
+  } catch (error) {
+    console.error('Failed to load forum posts:', error)
+    errorMessage.value = 'Failed to load forum posts from database.'
+
+    if (notify) {
+      notify('Failed to load forum posts.', 'bg-danger')
+    }
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(() => {
+  loadForumPosts()
+})
 
 const showLoginRequired = () => {
   if (notify) {
@@ -20,12 +44,12 @@ const showLoginRequired = () => {
 }
 
 const categories = computed(() => {
-  const uniqueCategories = forumPosts.map(post => post.category)
+  const uniqueCategories = forumPosts.value.map(post => post.category)
   return ['All', ...new Set(uniqueCategories)]
 })
 
 const filteredPosts = computed(() => {
-  return forumPosts.filter(post => {
+  return forumPosts.value.filter(post => {
     const keyword = searchText.value.toLowerCase().trim()
 
     const matchesSearch =
@@ -127,6 +151,14 @@ const sortedPosts = computed(() => {
   return posts
 })
 
+const visibleReplies = computed(() => {
+  return sortedPosts.value.reduce((total, post) => total + post.replies, 0)
+})
+
+const visibleViews = computed(() => {
+  return sortedPosts.value.reduce((total, post) => total + post.views, 0)
+})
+
 const totalPages = computed(() => {
   return Math.ceil(sortedPosts.value.length / pageSize)
 })
@@ -178,38 +210,39 @@ const resetFilters = () => {
     </div>
 
     <!-- Small statistics cards -->
-    <div class="row g-3 mb-4">
-      <div class="col-md-4">
-        <div class="card border-0 shadow-sm">
-          <div class="card-body">
-            <p class="text-muted small mb-1">Total Posts</p>
-            <h3 class="h4 mb-0">{{ sortedPosts.length }}</h3>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-4">
-        <div class="card border-0 shadow-sm">
-          <div class="card-body">
-            <p class="text-muted small mb-1">Total Replies</p>
-            <h3 class="h4 mb-0">
-              {{forumPosts.reduce((total, post) => total + post.replies, 0)}}
-            </h3>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-4">
-        <div class="card border-0 shadow-sm">
-          <div class="card-body">
-            <p class="text-muted small mb-1">Total Views</p>
-            <h3 class="h4 mb-0">
-              {{forumPosts.reduce((total, post) => total + post.views, 0)}}
-            </h3>
-          </div>
-        </div>
+    <!-- Small statistics cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Visible Posts</p>
+        <h3 class="h4 mb-0">{{ sortedPosts.length }}</h3>
       </div>
     </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Visible Replies</p>
+        <h3 class="h4 mb-0">
+          {{ visibleReplies }}
+        </h3>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <p class="text-muted small mb-1">Visible Views</p>
+        <h3 class="h4 mb-0">
+          {{ visibleViews }}
+        </h3>
+      </div>
+    </div>
+  </div>
+</div>
 
 
     <!-- Search and filter area -->
@@ -270,9 +303,22 @@ const resetFilters = () => {
           </div>
         </div>
 
+        <div v-if="isLoading" class="card border-0 shadow-sm mb-3">
+          <div class="card-body text-center py-5">
+            <div class="spinner-border text-success mb-3" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-muted mb-0">Loading forum posts...</p>
+          </div>
+        </div>
+
+        <div v-if="errorMessage" class="alert alert-danger">
+          {{ errorMessage }}
+        </div>
+
         <PostCard v-for="post in paginatedPosts" :key="post.id" :post="post" />
 
-        <div v-if="sortedPosts.length === 0" class="card border-0 shadow-sm">
+        <div v-if="!isLoading && sortedPosts.length === 0" class="card border-0 shadow-sm">
           <div class="card-body text-center py-5">
             <h3 class="h5 fw-bold mb-2">No discussions found</h3>
             <p class="text-muted mb-3">

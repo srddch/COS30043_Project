@@ -1,7 +1,7 @@
 <script setup>
-import { ref, computed, inject } from 'vue'
+import { ref, computed, inject, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { forumPosts } from './forumData'
+import { getForumPostById, updateForumPost } from '../../services/forumPostService'
 import { isLoggedIn, currentUser } from './forumAuthMock'
 
 const route = useRoute()
@@ -12,21 +12,47 @@ const postId = computed(() => {
   return Number(route.params.id)
 })
 
-const originalPost = computed(() => {
-  return forumPosts.find(post => post.id === postId.value)
-})
+const originalPost = ref(null)
+const isLoading = ref(false)
+const isSubmitting = ref(false)
+const loadError = ref('')
+
+const title = ref('')
+const category = ref('')
+const content = ref('')
+const tagsInput = ref('')
+const errors = ref([])
+
+const categories = ['Project', 'Vue', 'Deployment', 'Form', 'API', 'General']
 
 const canEditPost = computed(() => {
   return isLoggedIn && originalPost.value && originalPost.value.author === currentUser
 })
 
-const title = ref(originalPost.value ? originalPost.value.title : '')
-const category = ref(originalPost.value ? originalPost.value.category : '')
-const content = ref(originalPost.value ? originalPost.value.content : '')
-const tagsInput = ref(originalPost.value ? originalPost.value.tags.join(', ') : '')
-const errors = ref([])
+const loadPost = async () => {
+  try {
+    isLoading.value = true
+    loadError.value = ''
 
-const categories = ['Project', 'Vue', 'Deployment', 'Form', 'API', 'General']
+    const post = await getForumPostById(postId.value)
+
+    originalPost.value = post
+    title.value = post.title
+    category.value = post.category
+    content.value = post.content
+    tagsInput.value = post.tags.join(', ')
+  } catch (error) {
+    console.error('Failed to load post:', error)
+    originalPost.value = null
+    loadError.value = 'Post not found or failed to load.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(() => {
+  loadPost()
+})
 
 const validateForm = () => {
   errors.value = []
@@ -46,7 +72,7 @@ const validateForm = () => {
   return errors.value.length === 0
 }
 
-const updatePost = () => {
+const savePost = async () => {
   if (!validateForm()) {
     if (notify) {
       notify('Please fix the form errors.', 'bg-danger')
@@ -54,11 +80,9 @@ const updatePost = () => {
     return
   }
 
-  const postIndex = forumPosts.findIndex(post => post.id === postId.value)
-
-  if (postIndex === -1) {
+  if (!canEditPost.value) {
     if (notify) {
-      notify('Post not found.', 'bg-danger')
+      notify('You do not have permission to edit this post.', 'bg-danger')
     }
     return
   }
@@ -68,19 +92,33 @@ const updatePost = () => {
     .map(tag => tag.trim())
     .filter(tag => tag.length > 0)
 
-  forumPosts[postIndex] = {
-    ...forumPosts[postIndex],
+  const updatedPost = {
     title: title.value.trim(),
     category: category.value,
     content: content.value.trim(),
+    author: currentUser,
     tags: tags.length > 0 ? tags : ['General']
   }
 
-  if (notify) {
-    notify('Post updated successfully!', 'bg-success')
-  }
+  try {
+    isSubmitting.value = true
 
-  router.push(`/forum/${postId.value}`)
+    await updateForumPost(postId.value, updatedPost)
+
+    if (notify) {
+      notify('Post updated successfully!', 'bg-success')
+    }
+
+    router.push(`/forum/${postId.value}`)
+  } catch (error) {
+    console.error('Failed to update post:', error)
+
+    if (notify) {
+      notify('Failed to update post.', 'bg-danger')
+    }
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>
 
@@ -123,7 +161,7 @@ const updatePost = () => {
               </ul>
             </div>
 
-            <form @submit.prevent="updatePost" novalidate>
+            <form @submit.prevent="savePost" novalidate>
               <div class="mb-3">
                 <label for="editTitle" class="form-label">Title</label>
                 <input

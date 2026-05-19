@@ -46,20 +46,103 @@ app.get('/api/forum-posts', async (req, res) => {
   res.json(data)
 })
 
-// Create forum post
-app.post('/api/forum-posts', async (req, res) => {
-  const { title, category, content, author } = req.body
+// Get single forum post by id
+app.get('/api/forum-posts/:id', async (req, res) => {
+  const { id } = req.params
 
   const { data, error } = await supabase
     .from('forum_posts')
-    .insert([{ title, category, content, author }])
-    .select()
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    return res.status(404).json({ error: 'Forum post not found' })
+  }
+
+  res.json(data)
+})
+
+// Delete forum post
+app.delete('/api/forum-posts/:id', async (req, res) => {
+  const { id } = req.params
+
+  const { error } = await supabase
+    .from('forum_posts')
+    .delete()
+    .eq('id', id)
 
   if (error) {
     return res.status(500).json({ error: error.message })
   }
 
-  res.status(201).json(data[0])
+  res.json({ message: 'Forum post deleted successfully' })
+})
+
+// Create forum post
+// Create forum post
+app.post('/api/forum-posts', async (req, res) => {
+  const { title, category, content, author, tags } = req.body
+
+  if (!title || !category || !content || !author) {
+    return res.status(400).json({
+      error: 'Title, category, content, and author are required'
+    })
+  }
+
+  const { data, error } = await supabase
+    .from('forum_posts')
+    .insert([
+      {
+        title,
+        category,
+        content,
+        author,
+        tags: Array.isArray(tags) ? tags : [],
+        replies_count: 0,
+        views_count: 0
+      }
+    ])
+    .select()
+    .single()
+
+  if (error) {
+    return res.status(500).json({ error: error.message })
+  }
+
+  res.status(201).json(data)
+})
+
+// Update forum post
+app.put('/api/forum-posts/:id', async (req, res) => {
+  const { id } = req.params
+  const { title, category, content, author, tags } = req.body
+
+  if (!title || !category || !content || !author) {
+    return res.status(400).json({
+      error: 'Title, category, content, and author are required'
+    })
+  }
+
+  const { data, error } = await supabase
+    .from('forum_posts')
+    .update({
+      title,
+      category,
+      content,
+      author,
+      tags: Array.isArray(tags) ? tags : [],
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    return res.status(500).json({ error: error.message })
+  }
+
+  res.json(data)
 })
 
 // Get tasks

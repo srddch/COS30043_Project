@@ -1,7 +1,7 @@
 <script setup>
 import { ref, inject } from 'vue'
 import { useRouter } from 'vue-router'
-import { forumPosts } from './forumData'
+import { createForumPost } from '../../services/forumPostService'
 import { currentUser } from './forumAuthMock'
 
 const router = useRouter()
@@ -12,6 +12,7 @@ const category = ref('')
 const content = ref('')
 const tagsInput = ref('')
 const errors = ref([])
+const isSubmitting = ref(false)
 
 const categories = ['Project', 'Vue', 'Deployment', 'Form', 'API', 'General']
 
@@ -33,7 +34,7 @@ const validateForm = () => {
   return errors.value.length === 0
 }
 
-const createPost = () => {
+const createPost = async () => {
   if (!validateForm()) {
     if (notify) {
       notify('Please fix the form errors.', 'bg-danger')
@@ -47,24 +48,32 @@ const createPost = () => {
     .filter(tag => tag.length > 0)
 
   const newPost = {
-    id: Date.now(),
     title: title.value.trim(),
     category: category.value,
-    author: currentUser,
-    date: new Date().toISOString().slice(0, 10),
     content: content.value.trim(),
-    replies: 0,
-    views: 0,
+    author: currentUser || 'Anonymous',
     tags: tags.length > 0 ? tags : ['General']
   }
 
-  forumPosts.unshift(newPost)
+  try {
+    isSubmitting.value = true
 
-  if (notify) {
-    notify('Post created successfully!', 'bg-success')
+    const createdPost = await createForumPost(newPost)
+
+    if (notify) {
+      notify('Post created successfully!', 'bg-success')
+    }
+
+    router.push(`/forum/${createdPost.id}`)
+  } catch (error) {
+    console.error('Failed to create post:', error)
+
+    if (notify) {
+      notify('Failed to create post.', 'bg-danger')
+    }
+  } finally {
+    isSubmitting.value = false
   }
-
-  router.push('/forum')
 }
 </script>
 
@@ -104,6 +113,7 @@ const createPost = () => {
                   type="text"
                   class="form-control"
                   placeholder="Enter a clear discussion title"
+                  :disabled="isSubmitting"
                 >
                 <div class="form-text">
                   Minimum 5 characters.
@@ -116,6 +126,7 @@ const createPost = () => {
                   id="postCategory"
                   v-model="category"
                   class="form-select"
+                  :disabled="isSubmitting"
                 >
                   <option value="">Select a category</option>
                   <option
@@ -136,6 +147,7 @@ const createPost = () => {
                   class="form-control"
                   rows="6"
                   placeholder="Describe your question or discussion topic"
+                  :disabled="isSubmitting"
                 ></textarea>
                 <div class="form-text">
                   Minimum 20 characters.
@@ -150,6 +162,7 @@ const createPost = () => {
                   type="text"
                   class="form-control"
                   placeholder="Example: Vue, Router, Project"
+                  :disabled="isSubmitting"
                 >
                 <div class="form-text">
                   Separate tags with commas.
@@ -161,8 +174,12 @@ const createPost = () => {
                   Cancel
                 </router-link>
 
-                <button type="submit" class="btn btn-success">
-                  Create Post
+                <button
+                  type="submit"
+                  class="btn btn-success"
+                  :disabled="isSubmitting"
+                >
+                  {{ isSubmitting ? 'Creating...' : 'Create Post' }}
                 </button>
               </div>
             </form>
