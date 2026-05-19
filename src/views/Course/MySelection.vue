@@ -11,6 +11,7 @@ ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale)
 const notify = inject('notify')
 
 const enrolledUnits = computed(() => selectionStore.enrolledUnits)
+const isLoading = computed(() => selectionStore.loading)
 
 // Chart Data for Selected Units
 const chartData = computed(() => {
@@ -39,9 +40,13 @@ const chartOptions = {
   }
 }
 
-const handleRemove = (unit) => {
-  selectionStore.toggleEnroll(unit)
-  notify('Removed from your selection', 'bg-info')
+const handleRemove = async (unit) => {
+  const result = await selectionStore.toggleEnroll(unit)
+  if (result.success) {
+    notify('Removed! Unit removed from your selection.', 'bg-info')
+  } else {
+    notify(result.message, 'bg-danger')
+  }
 }
 
 const getCategoryColor = (category) => {
@@ -63,7 +68,14 @@ const getCategoryColor = (category) => {
       </div>
     </div>
 
-    <div v-if="enrolledUnits.length === 0" class="text-center py-5">
+    <div v-if="isLoading" class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-2 text-muted">Syncing with backend...</p>
+    </div>
+
+    <div v-else-if="enrolledUnits.length === 0" class="text-center py-5">
       <div class="display-1 mb-3">📋</div>
       <h3 class="fw-bold">No units selected yet</h3>
       <p class="text-muted mb-4">Go to the course catalogue to select units you're interested in.</p>

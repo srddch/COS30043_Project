@@ -126,6 +126,61 @@ app.delete('/api/tasks/:id', async (req, res) => {
   res.json({ message: 'Task deleted successfully' })
 })
 
+// --- Selections API ---
+
+// Get all selected units
+app.get('/api/selections', async (req, res) => {
+  const { data, error } = await supabase
+    .from('selections')
+    .select('*')
+
+  if (error) {
+    return res.status(500).json({ error: error.message })
+  }
+  res.json(data)
+})
+
+// Add a unit to selection
+app.post('/api/selections', async (req, res) => {
+  const fullUnit = req.body
+  
+  // 过滤字段，只保留 selections 表中存在的列
+  const filteredUnit = {
+    code: fullUnit.code,
+    course_title: fullUnit.course_title,
+    category: fullUnit.category,
+    instructor: fullUnit.instructor,
+    credits: fullUnit.credits,
+    semester_offered: fullUnit.semester_offered,
+    desc: fullUnit.desc
+  }
+
+  const { data, error } = await supabase
+    .from('selections')
+    .insert([filteredUnit])
+    .select()
+
+  if (error) {
+    console.error('❌ Supabase Insert Error:', error.message)
+    return res.status(500).json({ error: error.message })
+  }
+  res.status(201).json(data[0])
+})
+
+// Remove a unit from selection
+app.delete('/api/selections/:code', async (req, res) => {
+  const { code } = req.params
+  const { error } = await supabase
+    .from('selections')
+    .delete()
+    .eq('code', code)
+
+  if (error) {
+    return res.status(500).json({ error: error.message })
+  }
+  res.json({ message: 'Selection removed' })
+})
+
 const PORT = process.env.PORT || 3000
 
 app.listen(PORT, () => {

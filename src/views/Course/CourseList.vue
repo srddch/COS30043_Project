@@ -63,13 +63,13 @@ const selectUnit = (unit) => {
   selectedUnit.value = unit
 }
 
-const handleEnroll = (unit) => {
-  const result = selectionStore.toggleEnroll(unit)
+const handleEnroll = async (unit) => {
+  const result = await selectionStore.toggleEnroll(unit)
   if (result.success) {
     if (result.action === 'enrolled') {
-      notify('Enrolled successfully!', 'bg-success')
+      notify('Success! Unit added to your selection.', 'bg-success')
     } else {
-      notify('Removed from enrollment', 'bg-info')
+      notify('Removed! Unit removed from your selection.', 'bg-info')
     }
   } else {
     notify(result.message, 'bg-danger')

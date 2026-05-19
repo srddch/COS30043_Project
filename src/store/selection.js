@@ -1,25 +1,47 @@
-import { reactive, watch } from 'vue'
-
-const STORAGE_KEY = 'enrolled_units'
-
-// Load initial state from localStorage
-const savedUnits = localStorage.getItem(STORAGE_KEY)
-const initialState = savedUnits ? JSON.parse(savedUnits) : []
+import { reactive } from 'vue'
+import api from '../services/api'
 
 export const selectionStore = reactive({
-  enrolledUnits: initialState,
+  enrolledUnits: [],
+  loading: false,
+
+  async fetchSelections() {
+    this.loading = true
+    try {
+      const response = await api.get('/selections')
+      this.enrolledUnits = response.data
+    } catch (error) {
+      console.error('Failed to fetch selections:', error)
+    } finally {
+      this.loading = false
+    }
+  },
   
-  toggleEnroll(unit) {
+  async toggleEnroll(unit) {
     const index = this.enrolledUnits.findIndex(u => u.code === unit.code)
+    
     if (index > -1) {
-      this.enrolledUnits.splice(index, 1)
-      return { success: true, action: 'removed' }
+      // Remove from backend
+      try {
+        await api.delete(`/selections/${unit.code}`)
+        this.enrolledUnits.splice(index, 1)
+        return { success: true, action: 'removed' }
+      } catch (error) {
+        return { success: false, message: 'Failed to remove from backend' }
+      }
     } else {
       if (this.enrolledUnits.length >= 4) {
         return { success: false, message: 'Maximum 4 units allowed!' }
       }
-      this.enrolledUnits.push(unit)
-      return { success: true, action: 'enrolled' }
+      
+      // Add to backend
+      try {
+        const response = await api.post('/selections', unit)
+        this.enrolledUnits.push(response.data)
+        return { success: true, action: 'enrolled' }
+      } catch (error) {
+        return { success: false, message: 'Failed to save to backend' }
+      }
     }
   },
   
@@ -28,11 +50,5 @@ export const selectionStore = reactive({
   }
 })
 
-// Watch for changes and save to localStorage
-watch(
-  () => selectionStore.enrolledUnits,
-  (newUnits) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUnits))
-  },
-  { deep: true }
-)
+// Initialize selections when store is imported (optional, but helpful)
+selectionStore.fetchSelections()
