@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev:client": "vite",
+    "dev:server": "npm run dev --prefix backend",
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.6",
+    "concurrently": "^9.2.1",
     "vite": "^8.0.10"
   }
 }
