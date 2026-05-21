@@ -2,7 +2,7 @@
 import { ref, computed, inject, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getForumPostById, updateForumPost } from '../../services/forumPostService'
-import { isLoggedIn, currentUser } from './forumAuthMock'
+import { isUserLoggedIn, getCurrentUserName } from './forumAuth'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,7 +26,7 @@ const errors = ref([])
 const categories = ['Project', 'Vue', 'Deployment', 'Form', 'API', 'General']
 
 const canEditPost = computed(() => {
-  return isLoggedIn && originalPost.value && originalPost.value.author === currentUser
+  return isUserLoggedIn() && originalPost.value && originalPost.value.author === getCurrentUserName()
 })
 
 const loadPost = async () => {
@@ -73,6 +73,16 @@ const validateForm = () => {
 }
 
 const savePost = async () => {
+   if (!isUserLoggedIn()) {
+    if (notify) {
+      notify('Please login before editing this post.', 'bg-warning')
+    }
+
+    router.push('/login')
+    return
+  }
+
+  
   if (!validateForm()) {
     if (notify) {
       notify('Please fix the form errors.', 'bg-danger')
@@ -96,7 +106,7 @@ const savePost = async () => {
     title: title.value.trim(),
     category: category.value,
     content: content.value.trim(),
-    author: currentUser,
+    author: getCurrentUserName(),
     tags: tags.length > 0 ? tags : ['General']
   }
 

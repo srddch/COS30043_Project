@@ -63,6 +63,110 @@ app.get('/api/forum-posts/:id', async (req, res) => {
   res.json(data)
 })
 
+// Increment forum post view count
+app.patch('/api/forum-posts/:id/view', async (req, res) => {
+  const { id } = req.params
+
+  const { data: post, error: fetchError } = await supabase
+    .from('forum_posts')
+    .select('views_count')
+    .eq('id', id)
+    .single()
+
+  if (fetchError) {
+    return res.status(404).json({ error: 'Forum post not found' })
+  }
+
+  const newViewsCount = (post.views_count || 0) + 1
+
+  const { data, error } = await supabase
+    .from('forum_posts')
+    .update({
+      views_count: newViewsCount,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    return res.status(500).json({ error: error.message })
+  }
+
+  res.json(data)
+})
+
+// Get replies for a forum post
+app.get('/api/forum-posts/:id/replies', async (req, res) => {
+  const { id } = req.params
+
+  const { data, error } = await supabase
+    .from('forum_replies')
+    .select('*')
+    .eq('post_id', id)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    return res.status(500).json({ error: error.message })
+  }
+
+  res.json(data)
+})
+
+// Create a reply for a forum post
+app.post('/api/forum-posts/:id/replies', async (req, res) => {
+  const { id } = req.params
+  const { author, content } = req.body
+
+  if (!author || !content) {
+    return res.status(400).json({
+      error: 'Author and content are required'
+    })
+  }
+
+  const { data: replyData, error: replyError } = await supabase
+    .from('forum_replies')
+    .insert([
+      {
+        post_id: id,
+        author,
+        content
+      }
+    ])
+    .select()
+    .single()
+
+  if (replyError) {
+    return res.status(500).json({ error: replyError.message })
+  }
+
+  const { data: postData, error: postFetchError } = await supabase
+    .from('forum_posts')
+    .select('replies_count')
+    .eq('id', id)
+    .single()
+
+  if (postFetchError) {
+    return res.status(500).json({ error: postFetchError.message })
+  }
+
+  const newRepliesCount = (postData.replies_count || 0) + 1
+
+  const { error: updateError } = await supabase
+    .from('forum_posts')
+    .update({
+      replies_count: newRepliesCount,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+
+  if (updateError) {
+    return res.status(500).json({ error: updateError.message })
+  }
+
+  res.status(201).json(replyData)
+})
+
 // Delete forum post
 app.delete('/api/forum-posts/:id', async (req, res) => {
   const { id } = req.params

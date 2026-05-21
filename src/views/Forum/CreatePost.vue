@@ -2,7 +2,7 @@
 import { ref, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { createForumPost } from '../../services/forumPostService'
-import { currentUser } from './forumAuthMock'
+import { isUserLoggedIn, getCurrentUserName } from './forumAuth'
 
 const router = useRouter()
 const notify = inject('notify')
@@ -34,7 +34,18 @@ const validateForm = () => {
   return errors.value.length === 0
 }
 
+
 const createPost = async () => {
+
+   if (!isUserLoggedIn()) {
+    if (notify) {
+      notify('Please login before creating a post.', 'bg-warning')
+    }
+
+    router.push('/login')
+    return
+  }
+  
   if (!validateForm()) {
     if (notify) {
       notify('Please fix the form errors.', 'bg-danger')
@@ -51,7 +62,7 @@ const createPost = async () => {
     title: title.value.trim(),
     category: category.value,
     content: content.value.trim(),
-    author: currentUser || 'Anonymous',
+    author: getCurrentUserName() || 'Anonymous',
     tags: tags.length > 0 ? tags : ['General']
   }
 

@@ -1,10 +1,16 @@
 <script setup>
 import { ref, computed, inject, onMounted } from 'vue'
 import { getForumPosts } from '../../services/forumPostService'
-import { isLoggedIn } from './forumAuthMock'
+import { isUserLoggedIn } from './forumAuth'
 import PostCard from './components/PostCard.vue'
 
 const notify = inject('notify')
+
+const isLoggedIn = computed(() => {
+  return isUserLoggedIn()
+})
+
+
 const forumPosts = ref([])
 const isLoading = ref(false)
 const errorMessage = ref('')

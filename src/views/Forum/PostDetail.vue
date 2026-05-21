@@ -4,9 +4,12 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   getForumPostById,
   getForumPosts,
-  deleteForumPost
+  deleteForumPost,
+  incrementForumPostViews,
+  getForumReplies,
+  createForumReply
 } from '../../services/forumPostService'
-import { isLoggedIn, currentUser } from './forumAuthMock'
+import { isUserLoggedIn, getCurrentUserName } from './forumAuth'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,8 +21,14 @@ const postId = computed(() => {
 
 const post = ref(null)
 const allPosts = ref([])
+const replies = ref([])
+
 const isLoading = ref(false)
 const errorMessage = ref('')
+
+const newReplyContent = ref('')
+const replyErrors = ref([])
+const isSubmittingReply = ref(false)
 
 const loadPost = async () => {
   try {
@@ -27,18 +36,24 @@ const loadPost = async () => {
     errorMessage.value = ''
     post.value = null
     allPosts.value = []
+    replies.value = []
 
-    const [postData, postsData] = await Promise.all([
+    await incrementForumPostViews(postId.value)
+
+    const [postData, postsData, repliesData] = await Promise.all([
       getForumPostById(postId.value),
-      getForumPosts()
+      getForumPosts(),
+      getForumReplies(postId.value)
     ])
 
     post.value = postData
     allPosts.value = postsData
+    replies.value = repliesData
   } catch (error) {
     console.error('Failed to load forum post:', error)
     post.value = null
     allPosts.value = []
+    replies.value = []
     errorMessage.value = 'Post not found or failed to load.'
   } finally {
     isLoading.value = false
@@ -57,7 +72,7 @@ watch(
 )
 
 const canManagePost = computed(() => {
-  return isLoggedIn && post.value && post.value.author === currentUser
+  return isUserLoggedIn() && post.value && post.value.author === getCurrentUserName()
 })
 
 const calculateRelatedScore = (candidatePost) => {
@@ -113,6 +128,7 @@ const formatRelativeTime = (createdAt) => {
   const createdTime = new Date(createdAt)
   const now = new Date()
   const diffMs = now - createdTime
+
   const diffMinutes = Math.floor(diffMs / (1000 * 60))
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
@@ -136,11 +152,67 @@ const formatRelativeTime = (createdAt) => {
   return createdTime.toLocaleDateString()
 }
 
+const submitReply = async () => {
+  replyErrors.value = []
+
+  if (!isUserLoggedIn()) {
+  replyErrors.value.push('Please login before replying.')
+
+    if (notify) {
+      notify('Please login before replying.', 'bg-warning')
+    }
+
+    router.push('/login')
+    return
+  }
+
+  if (newReplyContent.value.trim().length < 5) {
+    replyErrors.value.push('Reply must be at least 5 characters.')
+  }
+
+  if (replyErrors.value.length > 0) {
+    if (notify) {
+      notify('Please fix the reply error.', 'bg-danger')
+    }
+
+    return
+  }
+
+  const newReply = {
+    author: getCurrentUserName(),
+    content: newReplyContent.value.trim()
+  }
+
+  try {
+    isSubmittingReply.value = true
+
+    const createdReply = await createForumReply(postId.value, newReply)
+
+    replies.value.push(createdReply)
+    newReplyContent.value = ''
+
+    post.value = await getForumPostById(postId.value)
+
+    if (notify) {
+      notify('Reply added successfully!', 'bg-success')
+    }
+  } catch (error) {
+    console.error('Failed to create reply:', error)
+
+    if (notify) {
+      notify('Failed to add reply.', 'bg-danger')
+    }
+  } finally {
+    isSubmittingReply.value = false
+  }
+}
+
 const deletePost = async () => {
   if (!canManagePost.value) {
     if (notify) {
       notify('You do not have permission to delete this post.', 'bg-danger')
     }
+
     return
   }
 
@@ -174,16 +246,25 @@ const deletePost = async () => {
       ← Back to Forum
     </router-link>
 
-    <div v-if="isLoading" class="card border-0 shadow-sm">
+    <div
+      v-if="isLoading"
+      class="card border-0 shadow-sm"
+    >
       <div class="card-body text-center py-5">
         <div class="spinner-border text-success mb-3" role="status">
           <span class="visually-hidden">Loading...</span>
         </div>
-        <p class="text-muted mb-0">Loading post details...</p>
+
+        <p class="text-muted mb-0">
+          Loading post details...
+        </p>
       </div>
     </div>
 
-    <div v-else-if="post" class="card border-0 shadow-sm">
+    <div
+      v-else-if="post"
+      class="card border-0 shadow-sm"
+    >
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start mb-3">
           <span class="badge bg-light text-dark border">
@@ -242,16 +323,100 @@ const deletePost = async () => {
           </p>
         </div>
 
+        <!-- Replies Section -->
+        <div class="border-top pt-4 mt-4">
+          <h2 class="h5 fw-bold mb-3">
+            Replies
+          </h2>
+
+          <div
+            v-if="replies.length > 0"
+            class="mb-4"
+          >
+            <div
+              v-for="reply in replies"
+              :key="reply.id"
+              class="border rounded-3 p-3 mb-3 bg-light"
+            >
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <span class="fw-semibold">
+                  {{ reply.author }}
+                </span>
+
+                <small class="text-muted">
+                  {{ formatRelativeTime(reply.createdAt) }}
+                </small>
+              </div>
+
+              <p class="text-secondary mb-0">
+                {{ reply.content }}
+              </p>
+            </div>
+          </div>
+
+          <p v-else class="text-muted small mb-4">
+            No replies yet. Be the first to reply.
+          </p>
+
+          <div class="card border bg-white">
+            <div class="card-body">
+              <h3 class="h6 fw-bold mb-3">
+                Add a Reply
+              </h3>
+
+              <div
+                v-if="replyErrors.length > 0"
+                class="alert alert-danger py-2"
+              >
+                <ul class="mb-0">
+                  <li
+                    v-for="error in replyErrors"
+                    :key="error"
+                  >
+                    {{ error }}
+                  </li>
+                </ul>
+              </div>
+
+              <form @submit.prevent="submitReply">
+                <textarea
+                  v-model="newReplyContent"
+                  class="form-control mb-3"
+                  rows="3"
+                  placeholder="Write a reply..."
+                  :disabled="isSubmittingReply"
+                ></textarea>
+
+                <div class="d-flex justify-content-end">
+                  <button
+                    type="submit"
+                    class="btn btn-success btn-sm"
+                    :disabled="isSubmittingReply"
+                  >
+                    {{ isSubmittingReply ? 'Posting...' : 'Post Reply' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- Related Discussions Section -->
         <div class="border-top pt-4 mt-4">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <h2 class="h5 fw-bold mb-0">Related Discussions</h2>
+            <h2 class="h5 fw-bold mb-0">
+              Related Discussions
+            </h2>
           </div>
 
           <p class="text-muted small mb-3">
             Recommended based on similar category, shared tags, replies, views, and recency.
           </p>
 
-          <div v-if="relatedPosts.length > 0" class="row g-3">
+          <div
+            v-if="relatedPosts.length > 0"
+            class="row g-3"
+          >
             <div
               v-for="related in relatedPosts"
               :key="related.id"
@@ -291,12 +456,19 @@ const deletePost = async () => {
       </div>
     </div>
 
-    <div v-else class="card border-0 shadow-sm">
+    <div
+      v-else
+      class="card border-0 shadow-sm"
+    >
       <div class="card-body text-center py-5">
-        <h1 class="h4 fw-bold mb-2">Post not found</h1>
+        <h1 class="h4 fw-bold mb-2">
+          Post not found
+        </h1>
+
         <p class="text-muted mb-4">
           The discussion post you are looking for does not exist.
         </p>
+
         <router-link to="/forum" class="btn btn-success">
           Back to Forum
         </router-link>

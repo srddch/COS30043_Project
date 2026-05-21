@@ -14,6 +14,16 @@ const mapForumPost = (row) => {
   }
 }
 
+const mapForumReply = (row) => {
+  return {
+    id: row.id,
+    postId: row.post_id,
+    author: row.author,
+    content: row.content,
+    createdAt: row.created_at
+  }
+}
+
 export const getForumPosts = async () => {
   const response = await api.get('/forum-posts')
   return response.data.map(mapForumPost)
@@ -37,4 +47,19 @@ export const updateForumPost = async (id, post) => {
 export const deleteForumPost = async (id) => {
   const response = await api.delete(`/forum-posts/${id}`)
   return response.data
+}
+
+export const incrementForumPostViews = async (id) => {
+  const response = await api.patch(`/forum-posts/${id}/view`)
+  return mapForumPost(response.data)
+}
+
+export const getForumReplies = async (postId) => {
+  const response = await api.get(`/forum-posts/${postId}/replies`)
+  return response.data.map(mapForumReply)
+}
+
+export const createForumReply = async (postId, reply) => {
+  const response = await api.post(`/forum-posts/${postId}/replies`, reply)
+  return mapForumReply(response.data)
 }
