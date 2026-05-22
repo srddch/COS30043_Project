@@ -118,9 +118,6 @@ const logout = () => {
           <li class="nav-item">
             <router-link class="nav-link" to="/forum">Forum</router-link>
           </li>
-          <li class="nav-item">
-            <router-link class="nav-link" to="/schedule">My Schedule</router-link>
-          </li>
           <li class="nav-item" v-if="user">
             <router-link class="nav-link" to="/account">My Account</router-link>
           </li>
