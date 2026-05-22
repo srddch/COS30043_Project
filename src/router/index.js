@@ -14,7 +14,7 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    component: Home，
+    component: Home,
     meta: { requiresAuth: true } 
   },
   // 成员 2: 用户系统预留
@@ -69,15 +69,26 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const userStr = localStorage.getItem('user')
-  const user = userStr ? JSON.parse(userStr) : null
+  let user = null
 
-  if (!user && to.path !== '/login' && to.path !== '/register') {
+  try {
+    user = userStr ? JSON.parse(userStr) : null
+  } catch (error) {
+    localStorage.removeItem('user')
+    user = null
+  }
+
+  const publicPages = ['Login', 'Register', 'Forum', 'PostDetail']
+  const isPublicPage = publicPages.includes(to.name)
+
+  if (!user && !isPublicPage) {
     return next('/login')
   }
-  
+
   const teacherPages = ['/course/manage', '/assignment/create']
+
   if (teacherPages.includes(to.path) && user?.role !== 'teacher') {
-    return next('/') 
+    return next('/')
   }
 
   next()
