@@ -267,34 +267,55 @@ app.get('/api/tasks', async (req, res) => {
 app.post('/api/tasks', async (req, res) => {
   const { text } = req.body
 
+  if (!text || text.trim() === '') {
+    return res.status(400).json({ error: 'Task text is required' })
+  }
+
   const { data, error } = await supabase
     .from('tasks')
-    .insert([{ text, done: false }])
+    .insert([
+      {
+        text: text.trim(),
+        done: false,
+        status: 'todo'
+      }
+    ])
     .select()
+    .single()
 
   if (error) {
     return res.status(500).json({ error: error.message })
   }
 
-  res.status(201).json(data[0])
+  res.status(201).json(data)
 })
 
-// Update task
+// Update task status
 app.put('/api/tasks/:id', async (req, res) => {
   const { id } = req.params
-  const { done } = req.body
+  const { status } = req.body
+
+  const allowedStatus = ['todo', 'in_progress', 'completed']
+
+  if (!allowedStatus.includes(status)) {
+    return res.status(400).json({ error: 'Invalid task status' })
+  }
 
   const { data, error } = await supabase
     .from('tasks')
-    .update({ done })
+    .update({
+      status,
+      done: status === 'completed'
+    })
     .eq('id', id)
     .select()
+    .single()
 
   if (error) {
     return res.status(500).json({ error: error.message })
   }
 
-  res.json(data[0])
+  res.json(data)
 })
 
 // Delete task
