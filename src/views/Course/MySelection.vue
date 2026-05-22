@@ -1,12 +1,20 @@
 <script setup>
 import { computed, inject } from 'vue'
 import { selectionStore } from '../../store/selection'
+import { watch } from 'vue'
+import { useUser } from '../User/composables/useUser.js'
 
 // Chart.js imports
 import { Pie } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale } from 'chart.js'
 
 ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale)
+
+const { user } = useUser()
+
+watch(user, () => {
+  selectionStore.fetchSelections()
+}, { immediate: true })
 
 const notify = inject('notify')
 
