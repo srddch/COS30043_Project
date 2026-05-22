@@ -3,6 +3,9 @@ import { ref, computed, onMounted, inject } from 'vue'
 import api from '../../services/api'
 import { selectionStore } from '../../store/selection'
 
+onMounted(async () => {
+  await selectionStore.fetchSelections() 
+})
 const notify = inject('notify')
 
 const units = ref([])
