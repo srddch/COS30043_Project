@@ -39,7 +39,7 @@ const logout = () => {
           </li>
           
           <!-- Courses Dropdown with Hover functionality -->
-          <li class="nav-item dropdown course-dropdown">
+          <li class="nav-item dropdown course-dropdown"  v-if="user && user.role === 'student'">
             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               Courses
               <span v-if="selectionStore.enrolledUnits.length > 0" class="badge bg-primary ms-2 rounded-pill small">
