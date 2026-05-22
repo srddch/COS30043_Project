@@ -317,61 +317,79 @@ app.delete('/api/tasks/:id', async (req, res) => {
 
 // Get all selected units
 app.get('/api/selections', async (req, res) => {
-  const { data, error } = await supabase
-    .from('selections')
-    .select('*')
+  const { student_id } = req.query;
 
-  if (error) {
-    return res.status(500).json({ error: error.message })
+  if (!student_id) {
+    return res.json([]);
   }
-  res.json(data)
-})
 
-// Add a unit to selection
+  try {
+    const { data, error } = await supabase
+      .from('selections')
+      .select('*')
+      .eq('student_id', student_id);
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error' });
+  }
+});
+
 app.post('/api/selections', async (req, res) => {
-  const fullUnit = req.body
-  
-  // 过滤字段，只保留 selections 表中存在的列
-  const filteredUnit = {
-    code: fullUnit.code,
-    course_title: fullUnit.course_title,
-    category: fullUnit.category,
-    instructor: fullUnit.instructor,
-    credits: fullUnit.credits,
-    semester_offered: fullUnit.semester_offered,
-    desc: fullUnit.desc
+  const data = req.body;
+
+  if (!data.student_id) {
+    return res.status(400).json({ error: 'student_id is required' });
   }
 
-  const { data, error } = await supabase
-    .from('selections')
-    .insert([filteredUnit])
-    .select()
+  try {
+    const { data: result, error } = await supabase
+      .from('selections')
+      .insert([{
+        code: data.code,
+        course_title: data.course_title,
+        category: data.category,
+        instructor: data.instructor,
+        credits: data.credits,
+        semester_offered: data.semester_offered,
+        desc: data.desc,
+        student_id: String(data.student_id)
+      }])
+      .select();
 
-  if (error) {
-    console.error('❌ Supabase Insert Error:', error.message)
-    return res.status(500).json({ error: error.message })
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.status(201).json(result[0]);
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error' });
   }
-  res.status(201).json(data[0])
-})
+});
 
-// Remove a unit from selection
 app.delete('/api/selections/:code', async (req, res) => {
-  const { code } = req.params
+  const { code } = req.params;
+  const { student_id } = req.query;
+
   const { error } = await supabase
     .from('selections')
     .delete()
     .eq('code', code)
+    .eq('student_id', student_id);
 
   if (error) {
-    return res.status(500).json({ error: error.message })
+    return res.status(500).json({ error: error.message });
   }
-  res.json({ message: 'Selection removed' })
-})
+
+  res.json({ message: 'Selection removed' });
+});
 
 app.post('/api/login', async (req, res) => {
-  console.log('Received login request:', req.body)
-
-  const { email, password } = req.body
+  const { email, password } = req.body;
 
   try {
     const { data: user, error } = await supabase
@@ -379,22 +397,19 @@ app.post('/api/login', async (req, res) => {
       .select('*')
       .eq('email', email)
       .eq('password', password)
-      .single()
+      .single();
 
     if (error || !user) {
-      return res.status(401).json({ message: 'Incorrect email or password' })
+      return res.status(401).json({ message: 'Incorrect email or password' });
     }
 
-    res.json(user)
+    res.json(user);
   } catch (err) {
-    console.error('Login error:', err)
-    res.status(500).json({ message: 'Server Error' })
+    res.status(500).json({ message: 'Server Error' });
   }
-})
+});
 
 app.post('/api/register', async (req, res) => {
-  console.log('Received registration request:', req.body) 
-
   const {
     firstName,
     lastName,
@@ -403,38 +418,35 @@ app.post('/api/register', async (req, res) => {
     role,
     studentId,
     staffId
-  } = req.body
+  } = req.body;
 
-  const full_name = `${firstName} ${lastName}`.trim()
+  const full_name = `${firstName} ${lastName}`.trim();
 
   try {
     const { data, error } = await supabase
       .from('users')
-      .insert([
-        {
-          first_name: firstName,
-          last_name: lastName,
-          full_name: full_name,
-          email: email,
-          password: password,
-          role: role,
-          student_id: role === 'student' ? studentId : null,
-          staff_id: role === 'teacher' ? staffId : null
-        }
-      ])
-      .select()
+      .insert([{
+        first_name: firstName,
+        last_name: lastName,
+        full_name: full_name,
+        email: email,
+        password: password,
+        role: role,
+        student_id: role === 'student' ? studentId : null,
+        staff_id: role === 'teacher' ? staffId : null
+      }])
+      .select();
 
     if (error) {
-      console.error('❌ Supabase Error:', error) 
-      return res.status(400).json({ message: error.message })
+      return res.status(400).json({ message: error.message });
     }
 
-    res.status(201).json({ success: true, user: data[0] })
+    res.status(201).json({ success: true, user: data[0] });
   } catch (err) {
-    console.error('❌ Server Error:', err)
-    res.status(500).json({ message: 'Server error' })
+    res.status(500).json({ message: 'Server error' });
   }
-})
+});
+
 
 const PORT = process.env.PORT || 3000
 
