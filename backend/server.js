@@ -447,6 +447,21 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
+app.get('/api/user', async (req, res) => {
+  const { id } = req.query
+
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error || !user) {
+    return res.status(404).json({ message: 'User not found' })
+  }
+
+  res.json(user)
+});
 
 const PORT = process.env.PORT || 3000
 
