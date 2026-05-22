@@ -1,7 +1,12 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUser } from './User/composables/useUser' 
 import api from '../services/api'
 
+const router = useRouter()
+const { user, loadUser } = useUser()
+loadUser()
 // --- Task Manager Logic with Database ---
 const newTask = ref('')
 const tasks = ref([])
@@ -119,9 +124,10 @@ onUnmounted(() => clearInterval(timerInterval.value))
     <div class="row mb-4 align-items-center">
       <div class="col-md-7">
         <h1 class="display-5 fw-bold">Dashboard</h1>
-        <p class="text-secondary">Welcome back! Stay organized and focused on your goals.</p>
+        <p class="text-secondary">Welcome back, {{ user?.first_name }} {{ user?.last_name }}! 
+          {{ user.role === 'teacher' ? 'Manage your courses and students.' : 'Stay organized with your study goals.' }}</p>
       </div>
-
+      
       <div class="col-md-5">
         <div class="p-3 bg-white shadow-sm rounded-3 border">
           <div class="d-flex justify-content-between mb-1 small fw-bold">
