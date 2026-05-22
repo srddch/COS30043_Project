@@ -1,5 +1,25 @@
 <script setup>
+import { onMounted, ref } from 'vue'
 import { selectionStore } from '../store/selection'
+import { useUser } from '../views/User/composables/useUser'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const { user } = useUser()
+
+onMounted(() => {
+  const storedUser = localStorage.getItem('user')
+  if (storedUser) {
+    user.value = JSON.parse(storedUser)
+  }
+})
+
+
+const logout = () => {
+  localStorage.removeItem('user')
+  user.value = null
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -101,10 +121,21 @@ import { selectionStore } from '../store/selection'
           <li class="nav-item">
             <router-link class="nav-link" to="/schedule">My Schedule</router-link>
           </li>
+          <li class="nav-item" v-if="user">
+            <router-link class="nav-link" to="/account">My Account</router-link>
+          </li>
         </ul>
-        
-        <div class="d-flex">
-          <router-link to="/login" class="btn btn-outline-light btn-sm">Login</router-link>
+        <div class="d-flex align-items-center gap-2">
+          <router-link to="/login" class="btn btn-outline-light btn-sm" v-if="!user">
+            Login
+          </router-link>
+
+          <span class="text-light small me-2" v-if="user">
+            Hello, {{ user?.full_name }}
+          </span>
+          <button class="btn btn-outline-light btn-sm" v-if="user" @click="logout">
+            Logout
+          </button>
         </div>
       </div>
     </div>
