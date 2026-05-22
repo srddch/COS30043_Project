@@ -1,13 +1,8 @@
+import { supabase } from '../lib/supabase'
+
 const STORAGE_KEY = 'smartcanvas_social_data'
 
-const templates = [
-  { id: 1, title: 'Business Poster Template', type: 'Poster' },
-  { id: 2, title: 'Instagram Story Template', type: 'Social Media' },
-  { id: 3, title: 'Presentation Template', type: 'Presentation' },
-  { id: 4, title: 'Marketing Flyer Template', type: 'Flyer' },
-  { id: 5, title: 'Resume Design Template', type: 'Document' },
-  { id: 6, title: 'Education Infographic Template', type: 'Infographic' }
-]
+
 
 const defaultData = {
   likes: [],
@@ -24,9 +19,24 @@ function loadData() {
 function saveData(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
 }
+export async function getTemplates() {
+  const { data, error } = await supabase
+    .from('courses')
+    .select('id, code, desc, cp, type')
+    .order('id', { ascending: true })
 
-export function getTemplates() {
-  return templates
+  if (error) {
+    console.error('Failed to load courses:', error)
+    return []
+  }
+
+  return data.map(course => ({
+    id: course.id,
+    title: course.desc,
+    code: course.code,
+    type: course.type,
+    cp: course.cp
+  }))
 }
 
 export function getSocialData() {

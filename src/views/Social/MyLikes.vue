@@ -1,89 +1,243 @@
 <script setup>
-import { ref, computed, inject } from 'vue'
-import {
-  getTemplates,
-  getSocialData,
-  toggleLike,
-  toggleFavourite,
-  rateTemplate
-} from '../../store/social'
+import { ref, computed, inject, onMounted } from 'vue'
+import { getTemplates } from '../../store/social'
+import { supabase } from '../../lib/supabase'
 
 const notify = inject('notify', () => {})
-const currentUserId = 1
 
-const templates = ref(getTemplates())
-const socialData = ref(getSocialData())
+const user = JSON.parse(localStorage.getItem('user'))
+const currentUserId = user ? String(user.id) : null
 
-function refresh() {
-  socialData.value = getSocialData()
+const templates = ref([])
+const likes = ref([])
+const favourites = ref([])
+const ratings = ref([])
+
+onMounted(async () => {
+  await loadAllData()
+})
+
+async function loadAllData() {
+  if (!currentUserId) {
+    notify('Please login before using social features', 'bg-warning')
+    return
+  }
+
+  templates.value = await getTemplates()
+  await loadSocialData()
 }
 
-function isLiked(id) {
-  return socialData.value.likes.some(
-    item => item.userId === currentUserId && item.itemId === id
+async function loadSocialData() {
+  if (!currentUserId) {
+    likes.value = []
+    favourites.value = []
+    ratings.value = []
+    return
+  }
+
+  const { data: likesData, error: likesError } = await supabase
+    .from('likes')
+    .select('*')
+    .eq('user_id', currentUserId)
+
+  const { data: favouritesData, error: favouritesError } = await supabase
+    .from('favourites')
+    .select('*')
+    .eq('user_id', currentUserId)
+
+  const { data: ratingsData, error: ratingsError } = await supabase
+    .from('ratings')
+    .select('*')
+    .eq('user_id', currentUserId)
+
+  if (likesError || favouritesError || ratingsError) {
+    console.error(likesError || favouritesError || ratingsError)
+    notify('Failed to load social data', 'bg-danger')
+    return
+  }
+
+  likes.value = likesData || []
+  favourites.value = favouritesData || []
+  ratings.value = ratingsData || []
+}
+
+function isLiked(courseId) {
+  return likes.value.some(item => item.course_id === courseId)
+}
+
+function isFavourited(courseId) {
+  return favourites.value.some(item => item.course_id === courseId)
+}
+
+function myRating(courseId) {
+  const rating = ratings.value.find(item => item.course_id === courseId)
+  return rating ? rating.rating : 0
+}
+
+function averageRating(courseId) {
+  const courseRatings = ratings.value.filter(item => item.course_id === courseId)
+
+  if (courseRatings.length === 0) {
+    return 'No rating yet'
+  }
+
+  const total = courseRatings.reduce((sum, item) => sum + Number(item.rating), 0)
+  return (total / courseRatings.length).toFixed(1)
+}
+
+async function handleLike(item) {
+  if (!currentUserId) {
+    notify('Please login first', 'bg-warning')
+    return
+  }
+
+  if (isLiked(item.id)) {
+    const { error } = await supabase
+      .from('likes')
+      .delete()
+      .eq('user_id', currentUserId)
+      .eq('course_id', item.id)
+
+    if (error) {
+      console.error(error)
+      notify('Failed to remove like', 'bg-danger')
+      return
+    }
+
+    notify('Like removed from database', 'bg-success')
+  } else {
+    const { error } = await supabase
+      .from('likes')
+      .insert([
+        {
+          user_id: currentUserId,
+          course_id: item.id
+        }
+      ])
+
+    if (error) {
+      console.error(error)
+      notify('Failed to save like', 'bg-danger')
+      return
+    }
+
+    notify('Like saved to database', 'bg-success')
+  }
+
+  await loadSocialData()
+}
+
+async function handleFavourite(item) {
+  if (!currentUserId) {
+    notify('Please login first', 'bg-warning')
+    return
+  }
+
+  if (isFavourited(item.id)) {
+    const { error } = await supabase
+      .from('favourites')
+      .delete()
+      .eq('user_id', currentUserId)
+      .eq('course_id', item.id)
+
+    if (error) {
+      console.error(error)
+      notify('Failed to remove favourite', 'bg-danger')
+      return
+    }
+
+    notify('Favourite removed from database', 'bg-success')
+  } else {
+    const { error } = await supabase
+      .from('favourites')
+      .insert([
+        {
+          user_id: currentUserId,
+          course_id: item.id
+        }
+      ])
+
+    if (error) {
+      console.error(error)
+      notify('Failed to save favourite', 'bg-danger')
+      return
+    }
+
+    notify('Favourite saved to database', 'bg-success')
+  }
+
+  await loadSocialData()
+}
+
+async function handleRate(item, score) {
+  if (!currentUserId) {
+    notify('Please login first', 'bg-warning')
+    return
+  }
+
+  const existingRating = ratings.value.find(
+    rating => rating.course_id === item.id
   )
+
+  if (existingRating) {
+    const { error } = await supabase
+      .from('ratings')
+      .update({ rating: score })
+      .eq('user_id', currentUserId)
+      .eq('course_id', item.id)
+
+    if (error) {
+      console.error(error)
+      notify('Failed to update rating', 'bg-danger')
+      return
+    }
+
+    notify('Rating updated in database', 'bg-warning')
+  } else {
+    const { error } = await supabase
+      .from('ratings')
+      .insert([
+        {
+          user_id: currentUserId,
+          course_id: item.id,
+          rating: score
+        }
+      ])
+
+    if (error) {
+      console.error(error)
+      notify('Failed to save rating', 'bg-danger')
+      return
+    }
+
+    notify('Rating saved to database', 'bg-warning')
+  }
+
+  await loadSocialData()
 }
 
-function isFavourited(id) {
-  return socialData.value.favourites.some(
-    item => item.userId === currentUserId && item.itemId === id
-  )
-}
+const myLikesCount = computed(() => likes.value.length)
 
-function myRating(id) {
-  const rating = socialData.value.ratings.find(
-    item => item.userId === currentUserId && item.itemId === id
-  )
-  return rating ? rating.score : 0
-}
+const myFavouritesCount = computed(() => favourites.value.length)
 
-function averageRating(id) {
-  const ratings = socialData.value.ratings.filter(item => item.itemId === id)
-  if (ratings.length === 0) return 'No rating yet'
-
-  const total = ratings.reduce((sum, item) => sum + item.score, 0)
-  return (total / ratings.length).toFixed(1)
-}
-
-function handleLike(item) {
-  toggleLike(currentUserId, item)
-  refresh()
-  notify('Like status updated successfully', 'bg-success')
-}
-
-function handleFavourite(item) {
-  toggleFavourite(currentUserId, item)
-  refresh()
-  notify('Favourite status updated successfully', 'bg-success')
-}
-
-function handleRate(item, score) {
-  rateTemplate(currentUserId, item, score)
-  refresh()
-  notify('Rating saved successfully', 'bg-warning')
-}
-
-const myLikesCount = computed(() =>
-  socialData.value.likes.filter(item => item.userId === currentUserId).length
-)
-
-const myFavouritesCount = computed(() =>
-  socialData.value.favourites.filter(item => item.userId === currentUserId).length
-)
-
-const myRatingsCount = computed(() =>
-  socialData.value.ratings.filter(item => item.userId === currentUserId).length
-)
+const myRatingsCount = computed(() => ratings.value.length)
 </script>
 
 <template>
   <div>
     <div class="mb-4">
       <h1 class="fw-bold">Likes, Favourites and Ratings</h1>
+
       <p class="text-muted">
-        This page allows users to interact with design templates through likes,
-        favourites and star ratings.
-      </p>
+  This page allows users to like, favourite and rate different courses.
+    </p>
+
+      <div
+        v-if="!currentUserId"
+        class="alert alert-warning"
+      >
+        Please login to use likes, favourites and ratings.
+      </div>
     </div>
 
     <div class="row g-3 mb-4">
@@ -129,8 +283,12 @@ const myRatingsCount = computed(() =>
 
             <h5 class="fw-bold">{{ item.title }}</h5>
 
+            <p class="text-muted mb-1">
+              Course Code: {{ item.code }}
+            </p>
+
             <p class="text-muted">
-              A reusable SmartCanvas design template for users.
+              Credit Points: {{ item.cp }}
             </p>
 
             <p>
@@ -173,8 +331,7 @@ const myRatingsCount = computed(() =>
     </div>
 
     <div class="alert alert-info mt-4">
-      This module prevents repeated likes by checking both user ID and template ID.
-      The interaction data is stored persistently in localStorage.
+      This module stores likes, favourites and ratings in the Supabase database and connects them to the logged-in user.
     </div>
   </div>
 </template>

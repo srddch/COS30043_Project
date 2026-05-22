@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted } from 'vue'
 import { selectionStore } from '../store/selection'
 import { useUser } from '../views/User/composables/useUser'
 import { useRouter } from 'vue-router'
@@ -9,11 +9,11 @@ const { user } = useUser()
 
 onMounted(() => {
   const storedUser = localStorage.getItem('user')
+
   if (storedUser) {
     user.value = JSON.parse(storedUser)
   }
 })
-
 
 const logout = () => {
   localStorage.removeItem('user')
@@ -25,37 +25,86 @@ const logout = () => {
 <template>
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
     <div class="container">
-      <router-link class="navbar-brand fw-bold" to="/">SmartCanvas</router-link>
-      
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+
+      <router-link
+        class="navbar-brand fw-bold"
+        to="/"
+      >
+        SmartCanvas
+      </router-link>
+
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#navbarNav"
+      >
         <span class="navbar-toggler-icon"></span>
       </button>
 
-      <div class="collapse navbar-collapse" id="navbarNav">
+      <div
+        class="collapse navbar-collapse"
+        id="navbarNav"
+      >
         <ul class="navbar-nav me-auto">
-     
+
+          <!-- Home -->
           <li class="nav-item">
-            <router-link class="nav-link" to="/">Home</router-link>
+            <router-link
+              class="nav-link"
+              to="/"
+            >
+              Home
+            </router-link>
           </li>
-          
-          <!-- Courses Dropdown with Hover functionality -->
-          <li class="nav-item dropdown course-dropdown"  v-if="user && user.role === 'student'">
-            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+
+          <!-- Courses Dropdown -->
+          <li
+            class="nav-item dropdown course-dropdown"
+            v-if="user && user.role === 'student'"
+          >
+            <a
+              class="nav-link dropdown-toggle d-flex align-items-center"
+              href="#"
+              id="navbarDropdown"
+              role="button"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
               Courses
-              <span v-if="selectionStore.enrolledUnits.length > 0" class="badge bg-primary ms-2 rounded-pill small">
+
+              <span
+                v-if="selectionStore.enrolledUnits.length > 0"
+                class="badge bg-primary ms-2 rounded-pill small"
+              >
                 {{ selectionStore.enrolledUnits.length }}
               </span>
             </a>
-            <ul class="dropdown-menu dropdown-menu-dark shadow" aria-labelledby="navbarDropdown">
+
+            <ul
+              class="dropdown-menu dropdown-menu-dark shadow"
+              aria-labelledby="navbarDropdown"
+            >
               <li>
-                <router-link class="dropdown-item py-2" to="/courses">
+                <router-link
+                  class="dropdown-item py-2"
+                  to="/courses"
+                >
                   Course Catalogue
                 </router-link>
               </li>
+
               <li>
-                <router-link class="dropdown-item py-2 d-flex justify-content-between align-items-center" to="/my-selection">
+                <router-link
+                  class="dropdown-item py-2 d-flex justify-content-between align-items-center"
+                  to="/my-selection"
+                >
                   <span>My Selection</span>
-                  <span v-if="selectionStore.enrolledUnits.length > 0" class="badge bg-primary rounded-pill ms-2">
+
+                  <span
+                    v-if="selectionStore.enrolledUnits.length > 0"
+                    class="badge bg-primary rounded-pill ms-2"
+                  >
                     {{ selectionStore.enrolledUnits.length }}
                   </span>
                 </router-link>
@@ -63,76 +112,111 @@ const logout = () => {
             </ul>
           </li>
 
+          <!-- Social Dropdown -->
           <li class="nav-item dropdown">
-  <a
-    class="nav-link dropdown-toggle"
-    href="#"
-    id="socialDropdown"
-    role="button"
-    data-bs-toggle="dropdown"
-    aria-expanded="false"
-  >
-    Social
-  </a>
+            <a
+              class="nav-link dropdown-toggle"
+              href="#"
+              id="socialDropdown"
+              role="button"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              Social
+            </a>
 
-  <ul class="dropdown-menu dropdown-menu-dark shadow">
+            <ul class="dropdown-menu dropdown-menu-dark shadow">
 
-    <li>
-      <RouterLink
-        class="dropdown-item py-2"
-        to="/social/likes"
-      >
-        Likes & Favourites
-      </RouterLink>
-    </li>
+              <li>
+                <RouterLink
+                  class="dropdown-item py-2"
+                  to="/social/likes"
+                >
+                  Likes & Favourites
+                </RouterLink>
+              </li>
 
-    <li>
-      <RouterLink
-        class="dropdown-item py-2"
-        to="/social/ratings"
-      >
-        My Ratings
-      </RouterLink>
-    </li>
+              <li>
+                <RouterLink
+                  class="dropdown-item py-2"
+                  to="/social/ratings"
+                >
+                  My Ratings
+                </RouterLink>
+              </li>
 
-    <li>
-      <RouterLink
-        class="dropdown-item py-2"
-        to="/social/schedule"
-      >
-        Auto Schedule
-      </RouterLink>
-    </li>
+              <li>
+                <RouterLink
+                  class="dropdown-item py-2"
+                  to="/social/schedule"
+                >
+                  Auto Schedule
+                </RouterLink>
+              </li>
 
-    <li>
-      <RouterLink
-        class="dropdown-item py-2"
-        to="/social/dashboard"
-      >
-        Activity Dashboard
-      </RouterLink>
-    </li>
+              <li>
+                <RouterLink
+                  class="dropdown-item py-2"
+                  to="/social/dashboard"
+                >
+                  Activity Dashboard
+                </RouterLink>
+              </li>
 
-  </ul>
-</li>
+            </ul>
+          </li>
+
+          <!-- Forum -->
           <li class="nav-item">
-            <router-link class="nav-link" to="/forum">Forum</router-link>
+            <router-link
+              class="nav-link"
+              to="/forum"
+            >
+              Forum
+            </router-link>
           </li>
-          <li class="nav-item" v-if="user">
-            <router-link class="nav-link" to="/account">My Account</router-link>
+
+          <!-- My Account -->
+          <li
+            class="nav-item"
+            v-if="user"
+          >
+            <router-link
+              class="nav-link"
+              to="/account"
+            >
+              My Account
+            </router-link>
           </li>
+
         </ul>
+
+        <!-- Right Side -->
         <div class="d-flex align-items-center gap-2">
-          <router-link to="/login" class="btn btn-outline-light btn-sm" v-if="!user">
+
+          <router-link
+            to="/login"
+            class="btn btn-outline-light btn-sm"
+            v-if="!user"
+          >
             Login
           </router-link>
 
-          <span class="text-light small me-2" v-if="user">
+          <span
+            class="text-light small me-2"
+            v-if="user"
+          >
             Hello, {{ user?.full_name }}
           </span>
-          <button class="btn btn-outline-light btn-sm" v-if="user" @click="logout">
+
+          <button
+            class="btn btn-outline-light btn-sm"
+            v-if="user"
+            @click="logout"
+          >
             Logout
           </button>
+
         </div>
       </div>
     </div>
@@ -145,11 +229,11 @@ const logout = () => {
   padding: 0.35em 0.65em;
 }
 
-/* CSS for Hover Dropdown functionality */
+/* Hover Dropdown */
 @media (min-width: 992px) {
   .course-dropdown:hover .dropdown-menu {
     display: block;
-    margin-top: 0; /* remove the gap so hover doesn't flicker */
+    margin-top: 0;
   }
 }
 
