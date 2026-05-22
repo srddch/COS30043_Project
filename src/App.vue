@@ -3,6 +3,10 @@ import { ref, provide, onMounted } from 'vue'
 import { RouterView } from 'vue-router'
 import Navbar from './components/Navbar.vue'
 import Toast from './components/Toast.vue'
+import { useUser } from './views/User/composables/useUser.js'
+
+const { loadUser } = useUser()
+loadUser()
 
 const toastRef = ref(null)
 
