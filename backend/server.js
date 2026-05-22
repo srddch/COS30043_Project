@@ -368,6 +368,74 @@ app.delete('/api/selections/:code', async (req, res) => {
   res.json({ message: 'Selection removed' })
 })
 
+app.post('/api/login', async (req, res) => {
+  console.log('Received login request:', req.body)
+
+  const { email, password } = req.body
+
+  try {
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .eq('password', password)
+      .single()
+
+    if (error || !user) {
+      return res.status(401).json({ message: 'Incorrect email or password' })
+    }
+
+    res.json(user)
+  } catch (err) {
+    console.error('Login error:', err)
+    res.status(500).json({ message: 'Server Error' })
+  }
+})
+
+app.post('/api/register', async (req, res) => {
+  console.log('Received registration request:', req.body) 
+
+  const {
+    firstName,
+    lastName,
+    email,
+    password,
+    role,
+    studentId,
+    staffId
+  } = req.body
+
+  const full_name = `${firstName} ${lastName}`.trim()
+
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .insert([
+        {
+          first_name: firstName,
+          last_name: lastName,
+          full_name: full_name,
+          email: email,
+          password: password,
+          role: role,
+          student_id: role === 'student' ? studentId : null,
+          staff_id: role === 'teacher' ? staffId : null
+        }
+      ])
+      .select()
+
+    if (error) {
+      console.error('❌ Supabase Error:', error) 
+      return res.status(400).json({ message: error.message })
+    }
+
+    res.status(201).json({ success: true, user: data[0] })
+  } catch (err) {
+    console.error('❌ Server Error:', err)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
 const PORT = process.env.PORT || 3000
 
 app.listen(PORT, () => {
