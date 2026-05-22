@@ -14,7 +14,7 @@ const routes = [
   {
     path: '/',
     name: 'Home',
-    component: Home
+    component: Home，
     meta: { requiresAuth: true } 
   },
   // 成员 2: 用户系统预留
