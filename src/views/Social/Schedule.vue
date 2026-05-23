@@ -230,7 +230,7 @@ async function clearSchedule() {
       </div>
     </div>
 
-    <div class="row g-4 mb-4">
+    <div class="row g-4 mb-4" v-if="isStudent">
       <!-- Left Column: Favourites (Existing Feature) -->
       <div class="col-md-6">
         <div class="card shadow-sm h-100">
@@ -253,7 +253,7 @@ async function clearSchedule() {
       </div>
 
       <!-- Right Column: Selections (New Generator Source) -->
-      <div class="col-md-6">
+      <div class="col-md-6" v-if="isStudent">
         <div class="card shadow-sm h-100 border-primary">
           <div class="card-body">
             <h4 class="fw-bold text-primary">My Selected Units</h4>
