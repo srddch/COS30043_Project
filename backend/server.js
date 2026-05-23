@@ -338,22 +338,26 @@ app.delete('/api/tasks/:id', async (req, res) => {
 
 // Get all selected units
 app.get('/api/selections', async (req, res) => {
-  const { student_id } = req.query;
-
-  if (!student_id) {
-    return res.json([]);
-  }
+  const { student_id, staff_id } = req.query;
 
   try {
-    const { data, error } = await supabase
-      .from('selections')
-      .select('*')
-      .eq('student_id', student_id);
+    let query = supabase.from('selections').select('*');
 
-    if (error) {
-      return res.status(500).json({ error: error.message });
+  
+    if (student_id) {
+      query = query.eq('student_id', student_id);
+    }
+   
+    else if (staff_id) {
+      query = query.eq('staff_id', staff_id);
+    }
+   
+    else {
+      return res.json([]);
     }
 
+    const { data, error } = await query;
+    if (error) return res.status(500).json({ error: error.message });
     res.json(data);
   } catch (err) {
     res.status(500).json({ message: 'Server Error' });
@@ -363,8 +367,8 @@ app.get('/api/selections', async (req, res) => {
 app.post('/api/selections', async (req, res) => {
   const data = req.body;
 
-  if (!data.student_id) {
-    return res.status(400).json({ error: 'student_id is required' });
+  if (!data.student_id && !data.staff_id) {
+    return res.status(400).json({ error: 'student_id or staff_id is required' });
   }
 
   try {
@@ -378,14 +382,12 @@ app.post('/api/selections', async (req, res) => {
         credits: data.credits,
         semester_offered: data.semester_offered,
         desc: data.desc,
-        student_id: String(data.student_id)
+        student_id: data.student_id ?? null,  
+        staff_id: data.staff_id ?? null       
       }])
       .select();
 
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-
+    if (error) return res.status(500).json({ error: error.message });
     res.status(201).json(result[0]);
   } catch (err) {
     res.status(500).json({ message: 'Server Error' });
@@ -394,18 +396,21 @@ app.post('/api/selections', async (req, res) => {
 
 app.delete('/api/selections/:code', async (req, res) => {
   const { code } = req.params;
-  const { student_id } = req.query;
+  const { student_id, staff_id } = req.query;
 
-  const { error } = await supabase
-    .from('selections')
-    .delete()
-    .eq('code', code)
-    .eq('student_id', student_id);
+  let query = supabase.from('selections').delete().eq('code', code);
 
-  if (error) {
-    return res.status(500).json({ error: error.message });
+  if (student_id) {
+    query = query.eq('student_id', student_id);
+  }
+  else if (staff_id) {
+    query = query.eq('staff_id', staff_id);
+  } else {
+    return res.status(400).json({ error: 'Missing user ID' });
   }
 
+  const { error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
   res.json({ message: 'Selection removed' });
 });
 
