@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, inject, onMounted } from 'vue'
 import { supabase } from '../../lib/supabase'
+import { selectionStore } from '../../store/selection'
 
 const notify = inject('notify', () => {})
 
@@ -44,6 +45,7 @@ async function loadData() {
   await loadCourses()
   await loadFavourites()
   await loadSchedule()
+  await selectionStore.fetchSelections()
 }
 
 async function loadCourses() {
@@ -102,6 +104,12 @@ const favouriteCourses = computed(() => {
     .filter(Boolean)
 })
 
+const enrolledCourses = computed(() => {
+  return selectionStore.enrolledUnits.map(enrolled => {
+    return courses.value.find(c => c.code === enrolled.code)
+  }).filter(Boolean)
+})
+
 const scheduleCourses = computed(() => {
   return schedule.value.map(item => {
     const course = getCourse(item.course_id)
@@ -134,8 +142,8 @@ async function generateSchedule() {
     return
   }
 
-  if (favouriteCourses.value.length === 0) {
-    notify('Please favourite at least one course first', 'bg-warning')
+  if (enrolledCourses.value.length === 0) {
+    notify('Please select at least one course in Course Catalogue first', 'bg-warning')
     return
   }
 
@@ -146,7 +154,7 @@ async function generateSchedule() {
 
   const newSchedule = []
 
-  favouriteCourses.value.forEach((course, courseIndex) => {
+  enrolledCourses.value.forEach((course, courseIndex) => {
     const firstSlot = timeSlots[(courseIndex * 2) % timeSlots.length]
     const secondSlot = timeSlots[(courseIndex * 2 + 1) % timeSlots.length]
 
@@ -207,7 +215,7 @@ async function clearSchedule() {
       <h1 class="fw-bold">Automatic Schedule Generator</h1>
 
       <p class="text-muted">
-  This page automatically generates a weekly study schedule based on the user's favourite courses.
+  This page automatically generates a weekly study schedule based on your <strong>selected units</strong> from the course catalogue.
 </p>
 
       <div
@@ -218,53 +226,58 @@ async function clearSchedule() {
       </div>
     </div>
 
-
-    <div class="card shadow-sm mb-4">
-      <div class="card-body">
-        <h4 class="fw-bold">My Favourite Courses</h4>
-
-        <div
-          v-if="favouriteCourses.length === 0"
-          class="text-muted"
-        >
-          No favourite courses yet. Please favourite courses first.
-        </div>
-
-        <ul
-          v-else
-          class="list-group"
-        >
-          <li
-            v-for="course in favouriteCourses"
-            :key="course.id"
-            class="list-group-item d-flex justify-content-between align-items-center"
-          >
-            <div>
-              <strong>{{ course.code }}</strong>
-
-              <div class="text-muted small">
-                {{ course.desc }}
-              </div>
+    <div class="row g-4 mb-4">
+      <!-- Left Column: Favourites (Existing Feature) -->
+      <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+          <div class="card-body">
+            <h4 class="fw-bold">My Favourite Courses</h4>
+            <div v-if="favouriteCourses.length === 0" class="text-muted">
+              No favourite courses yet.
             </div>
+            <ul v-else class="list-group list-group-flush">
+              <li v-for="course in favouriteCourses" :key="course.id" class="list-group-item d-flex justify-content-between align-items-center px-0">
+                <div>
+                  <strong>{{ course.code }}</strong>
+                  <div class="text-muted small">{{ course.desc }}</div>
+                </div>
+                <span class="badge" :class="typeBadgeClass(course.type)">{{ course.type }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
 
-            <span
-              class="badge"
-              :class="typeBadgeClass(course.type)"
-            >
-              {{ course.type }}
-            </span>
-          </li>
-        </ul>
+      <!-- Right Column: Selections (New Generator Source) -->
+      <div class="col-md-6">
+        <div class="card shadow-sm h-100 border-primary">
+          <div class="card-body">
+            <h4 class="fw-bold text-primary">My Selected Units</h4>
+            <p class="small text-muted mb-3">These units will be used to generate your schedule.</p>
+            <div v-if="enrolledCourses.length === 0" class="text-muted">
+              No units selected in Course Catalogue.
+            </div>
+            <ul v-else class="list-group list-group-flush">
+              <li v-for="course in enrolledCourses" :key="course.id" class="list-group-item d-flex justify-content-between align-items-center px-0">
+                <div>
+                  <strong>{{ course.code }}</strong>
+                  <div class="text-muted small">{{ course.desc }}</div>
+                </div>
+                <span class="badge" :class="typeBadgeClass(course.type)">{{ course.type }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="d-flex gap-2 mb-4">
       <button
-        class="btn btn-primary"
-        :disabled="!currentUserId || favouriteCourses.length === 0"
+        class="btn btn-primary px-4"
+        :disabled="!currentUserId || enrolledCourses.length === 0"
         @click="generateSchedule"
       >
-        Generate Schedule
+        <i class="bi bi-calendar-plus me-2"></i>Generate Schedule
       </button>
 
       <button
