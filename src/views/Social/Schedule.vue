@@ -7,6 +7,10 @@ const notify = inject('notify', () => {})
 
 const user = JSON.parse(localStorage.getItem('user'))
 const currentUserId = user ? String(user.id) : null
+const isStudent = computed(() => {
+  const user = JSON.parse(localStorage.getItem('user'))
+    return user?.role === 'student'
+})
 
 const favourites = ref([])
 const courses = ref([])
