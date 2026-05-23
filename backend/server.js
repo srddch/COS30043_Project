@@ -435,6 +435,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+
 app.post('/api/register', async (req, res) => {
   const {
     firstName,
@@ -449,6 +450,44 @@ app.post('/api/register', async (req, res) => {
   const full_name = `${firstName} ${lastName}`.trim();
 
   try {
+    
+    const { data: existEmail } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', email)
+      .single()
+
+    if (existEmail) {
+      return res.status(400).json({
+        message: 'Email is already registered'
+      })
+    }
+    if (role === 'student') {
+      const { data: existStudent } = await supabase
+        .from('users')
+        .select('student_id')
+        .eq('student_id', studentId)
+        .single()
+
+      if (existStudent) {
+        return res.status(400).json({
+          message: 'This student ID is already registered'
+        })
+      }
+    }
+    if (role === 'teacher') {
+      const { data: existStaff } = await supabase
+        .from('users')
+        .select('staff_id')
+        .eq('staff_id', staffId)
+        .single()
+
+      if (existStaff) {
+        return res.status(400).json({
+          message: 'This staff ID is already registered'
+        })
+      }
+    }
     const { data, error } = await supabase
       .from('users')
       .insert([{
@@ -468,10 +507,12 @@ app.post('/api/register', async (req, res) => {
     }
 
     res.status(201).json({ success: true, user: data[0] });
+
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 app.get('/api/user', async (req, res) => {
   const { id } = req.query
