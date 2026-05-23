@@ -1,10 +1,14 @@
 <script setup>
+import { useRoute } from 'vue-router'
+
 defineProps({
   post: {
     type: Object,
     required: true
   }
 })
+
+const route = useRoute()
 
 const formatRelativeTime = (createdAt) => {
   const createdTime = new Date(createdAt)
@@ -108,7 +112,7 @@ const getAuthorInitial = (author) => {
             </div>
 
             <router-link
-              :to="`/forum/${post.id}`"
+              :to="{ name: 'PostDetail', params: { id: post.id }, query: route.query }"
               class="btn btn-outline-success btn-sm"
             >
               View Details

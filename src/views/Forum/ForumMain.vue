@@ -1,10 +1,14 @@
 <script setup>
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, computed, inject, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { getForumPosts } from '../../services/forumPostService'
 import { isUserLoggedIn } from './forumAuth'
 import PostCard from './components/PostCard.vue'
 
+
 const notify = inject('notify')
+const route = useRoute()
+const router = useRouter()
 
 const isLoggedIn = computed(() => {
   return isUserLoggedIn()
@@ -15,10 +19,10 @@ const forumPosts = ref([])
 const isLoading = ref(false)
 const errorMessage = ref('')
 
-const searchText = ref('')
-const selectedCategory = ref('All')
-const sortBy = ref('latest')
-const currentPage = ref(1)
+const searchText = ref(route.query.search?.toString() || '')
+const selectedCategory = ref(route.query.category?.toString() || 'All')
+const sortBy = ref(route.query.sort?.toString() || 'latest')
+const currentPage = ref(Number(route.query.page) || 1)
 const pageSize = 4
 
 const loadForumPosts = async () => {
@@ -184,6 +188,22 @@ const goToPage = (page) => {
     currentPage.value = page
   }
 }
+
+const buildForumQuery = () => {
+  return {
+    search: searchText.value.trim() || undefined,
+    category: selectedCategory.value !== 'All' ? selectedCategory.value : undefined,
+    sort: sortBy.value !== 'latest' ? sortBy.value : undefined,
+    page: currentPage.value > 1 ? currentPage.value : undefined
+  }
+}
+
+watch([searchText, selectedCategory, sortBy, currentPage], () => {
+  router.replace({
+    name: 'Forum',
+    query: buildForumQuery()
+  })
+})
 
 const resetFilters = () => {
   searchText.value = ''

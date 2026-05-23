@@ -242,7 +242,10 @@ const deletePost = async () => {
 
 <template>
   <div class="post-detail-page">
-    <router-link to="/forum" class="btn btn-outline-secondary btn-sm mb-4">
+    <router-link
+      :to="{ name: 'Forum', query: route.query }"
+      class="btn btn-outline-secondary btn-sm mb-4"
+    >
       ← Back to Forum
     </router-link>
 
