@@ -251,9 +251,11 @@ app.put('/api/forum-posts/:id', async (req, res) => {
 
 // Get tasks
 app.get('/api/tasks', async (req, res) => {
+  const { user_id } = req.query;
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
+    .eq('user_id', user_id)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -265,7 +267,7 @@ app.get('/api/tasks', async (req, res) => {
 
 // Create task
 app.post('/api/tasks', async (req, res) => {
-  const { text } = req.body
+  const { text, user_id } = req.body;
 
   if (!text || text.trim() === '') {
     return res.status(400).json({ error: 'Task text is required' })
@@ -277,7 +279,8 @@ app.post('/api/tasks', async (req, res) => {
       {
         text: text.trim(),
         done: false,
-        status: 'todo'
+        status: 'todo',
+        user_id: user_id 
       }
     ])
     .select()
@@ -293,7 +296,7 @@ app.post('/api/tasks', async (req, res) => {
 // Update task status
 app.put('/api/tasks/:id', async (req, res) => {
   const { id } = req.params
-  const { status } = req.body
+  const { status, user_id } = req.body; 
 
   const allowedStatus = ['todo', 'in_progress', 'completed']
 
@@ -308,6 +311,7 @@ app.put('/api/tasks/:id', async (req, res) => {
       done: status === 'completed'
     })
     .eq('id', id)
+    .eq('user_id', user_id)
     .select()
     .single()
 
@@ -321,11 +325,13 @@ app.put('/api/tasks/:id', async (req, res) => {
 // Delete task
 app.delete('/api/tasks/:id', async (req, res) => {
   const { id } = req.params
+  const { user_id } = req.body;
 
   const { error } = await supabase
     .from('tasks')
     .delete()
     .eq('id', id)
+    .eq('user_id', user_id); 
 
   if (error) {
     return res.status(500).json({ error: error.message })
@@ -333,7 +339,6 @@ app.delete('/api/tasks/:id', async (req, res) => {
 
   res.json({ message: 'Task deleted successfully' })
 })
-
 // --- Selections API ---
 
 // Get all selected units
