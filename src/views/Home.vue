@@ -42,8 +42,9 @@ const loadTasks = async () => {
     isLoadingTasks.value = true
     taskError.value = ''
 
-    const res = await api.get('/tasks')
-
+     const res = await api.get('/tasks', {
+      params: { user_id: user.value.id }
+    })
     tasks.value = res.data.map(task => ({
       ...task,
       status: task.status || (task.done ? 'completed' : 'todo')
@@ -65,9 +66,9 @@ const addTask = async () => {
     taskError.value = ''
 
     const res = await api.post('/tasks', {
-      text
+      text,
+      user_id: user.value.id  
     })
-
     tasks.value.unshift({
       ...res.data,
       status: res.data.status || 'todo'
@@ -84,7 +85,9 @@ const deleteTask = async (id) => {
   try {
     taskError.value = ''
 
-    await api.delete(`/tasks/${id}`)
+    await api.delete(`/tasks/${id}`,{
+      data: { user_id: user.value.id }
+    })
     tasks.value = tasks.value.filter(task => task.id !== id)
   } catch (error) {
     console.error('Failed to delete task:', error)
@@ -118,7 +121,8 @@ const dropTask = async (newStatus) => {
     taskError.value = ''
 
     await api.put(`/tasks/${task.id}`, {
-      status: newStatus
+      status: newStatus,
+      user_id: user.value.id
     })
   } catch (error) {
     console.error('Failed to update task status:', error)
