@@ -15,8 +15,32 @@ A web application built with **Vue 3**, **Bootstrap**that provides a collaborati
 
 This project meets all functional and technical requirements of the assignment (at least 10 interconnected pages, search/sort, user‑generated content, social features, etc.).
 
-## Note：
+## Installation
 
-The download commands for the plugins required for this project; if the necessary plugins are not installed, some features may malfunction or fail to display.
+- Requirements: Node.js (LTS) + npm
+- Frontend dependencies: vue@3, vue-router@4, bootstrap@5, @popperjs/core, axios, chart.js, vue-chartjs
+- Frontend dev tools: vite, @vitejs/plugin-vue, concurrently
+- Backend dependencies (in /backend): express, cors, dotenv, @supabase/supabase-js
 
-————  npm install chart.js vue-chartjs
+```bash
+# Install all dependencies (recommended)
+npm install
+cd backend && npm install
+```
+
+```bash
+# Install plugins/packages individually (optional)
+# Frontend (run at project root)
+npm install vue vue-router bootstrap @popperjs/core axios chart.js vue-chartjs concurrently
+
+# Backend (run in /backend)
+cd backend
+npm install express cors dotenv @supabase/supabase-js
+```
+
+```bash
+# Start (run at project root)
+npm run dev
+```
+
+- Backend env: create `backend/.env` with `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `PORT`
