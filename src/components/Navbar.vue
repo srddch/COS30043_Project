@@ -3,6 +3,9 @@ import { onMounted } from 'vue'
 import { selectionStore } from '../store/selection'
 import { useUser } from '../views/User/composables/useUser'
 import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+
+const role = computed(() => user.value?.role)
 
 const router = useRouter()
 const { user } = useUser()
@@ -60,9 +63,7 @@ const logout = () => {
 
           <!-- Courses Dropdown -->
           <li
-            class="nav-item dropdown course-dropdown"
-            v-if="user && user.role === 'student'"
-          >
+            class="nav-item dropdown course-dropdown">
             <a
               class="nav-link dropdown-toggle d-flex align-items-center"
               href="#"
@@ -127,7 +128,7 @@ const logout = () => {
 
             <ul class="dropdown-menu dropdown-menu-dark shadow">
 
-              <li>
+              <li v-if="role === 'student'">
                 <RouterLink
                   class="dropdown-item py-2"
                   to="/social/likes"
@@ -136,7 +137,7 @@ const logout = () => {
                 </RouterLink>
               </li>
 
-              <li>
+              <li v-if="role === 'student'">
                 <RouterLink
                   class="dropdown-item py-2"
                   to="/social/ratings"
@@ -154,7 +155,7 @@ const logout = () => {
                 </RouterLink>
               </li>
 
-              <li>
+              <li v-if="role === 'student'">
                 <RouterLink
                   class="dropdown-item py-2"
                   to="/social/dashboard"

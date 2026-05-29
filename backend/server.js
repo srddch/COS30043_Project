@@ -251,9 +251,11 @@ app.put('/api/forum-posts/:id', async (req, res) => {
 
 // Get tasks
 app.get('/api/tasks', async (req, res) => {
+  const { user_id } = req.query;
   const { data, error } = await supabase
     .from('tasks')
     .select('*')
+    .eq('user_id', user_id)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -265,7 +267,7 @@ app.get('/api/tasks', async (req, res) => {
 
 // Create task
 app.post('/api/tasks', async (req, res) => {
-  const { text } = req.body
+  const { text, user_id } = req.body;
 
   if (!text || text.trim() === '') {
     return res.status(400).json({ error: 'Task text is required' })
@@ -277,7 +279,8 @@ app.post('/api/tasks', async (req, res) => {
       {
         text: text.trim(),
         done: false,
-        status: 'todo'
+        status: 'todo',
+        user_id: user_id 
       }
     ])
     .select()
@@ -293,7 +296,7 @@ app.post('/api/tasks', async (req, res) => {
 // Update task status
 app.put('/api/tasks/:id', async (req, res) => {
   const { id } = req.params
-  const { status } = req.body
+  const { status, user_id } = req.body; 
 
   const allowedStatus = ['todo', 'in_progress', 'completed']
 
@@ -308,6 +311,7 @@ app.put('/api/tasks/:id', async (req, res) => {
       done: status === 'completed'
     })
     .eq('id', id)
+    .eq('user_id', user_id)
     .select()
     .single()
 
@@ -321,11 +325,13 @@ app.put('/api/tasks/:id', async (req, res) => {
 // Delete task
 app.delete('/api/tasks/:id', async (req, res) => {
   const { id } = req.params
+  const { user_id } = req.body;
 
   const { error } = await supabase
     .from('tasks')
     .delete()
     .eq('id', id)
+    .eq('user_id', user_id); 
 
   if (error) {
     return res.status(500).json({ error: error.message })
@@ -333,27 +339,30 @@ app.delete('/api/tasks/:id', async (req, res) => {
 
   res.json({ message: 'Task deleted successfully' })
 })
-
 // --- Selections API ---
 
 // Get all selected units
 app.get('/api/selections', async (req, res) => {
-  const { student_id } = req.query;
-
-  if (!student_id) {
-    return res.json([]);
-  }
+  const { student_id, staff_id } = req.query;
 
   try {
-    const { data, error } = await supabase
-      .from('selections')
-      .select('*')
-      .eq('student_id', student_id);
+    let query = supabase.from('selections').select('*');
 
-    if (error) {
-      return res.status(500).json({ error: error.message });
+  
+    if (student_id) {
+      query = query.eq('student_id', student_id);
+    }
+   
+    else if (staff_id) {
+      query = query.eq('staff_id', staff_id);
+    }
+   
+    else {
+      return res.json([]);
     }
 
+    const { data, error } = await query;
+    if (error) return res.status(500).json({ error: error.message });
     res.json(data);
   } catch (err) {
     res.status(500).json({ message: 'Server Error' });
@@ -363,8 +372,8 @@ app.get('/api/selections', async (req, res) => {
 app.post('/api/selections', async (req, res) => {
   const data = req.body;
 
-  if (!data.student_id) {
-    return res.status(400).json({ error: 'student_id is required' });
+  if (!data.student_id && !data.staff_id) {
+    return res.status(400).json({ error: 'student_id or staff_id is required' });
   }
 
   try {
@@ -378,14 +387,12 @@ app.post('/api/selections', async (req, res) => {
         credits: data.credits,
         semester_offered: data.semester_offered,
         desc: data.desc,
-        student_id: String(data.student_id)
+        student_id: data.student_id ?? null,  
+        staff_id: data.staff_id ?? null       
       }])
       .select();
 
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-
+    if (error) return res.status(500).json({ error: error.message });
     res.status(201).json(result[0]);
   } catch (err) {
     res.status(500).json({ message: 'Server Error' });
@@ -394,18 +401,21 @@ app.post('/api/selections', async (req, res) => {
 
 app.delete('/api/selections/:code', async (req, res) => {
   const { code } = req.params;
-  const { student_id } = req.query;
+  const { student_id, staff_id } = req.query;
 
-  const { error } = await supabase
-    .from('selections')
-    .delete()
-    .eq('code', code)
-    .eq('student_id', student_id);
+  let query = supabase.from('selections').delete().eq('code', code);
 
-  if (error) {
-    return res.status(500).json({ error: error.message });
+  if (student_id) {
+    query = query.eq('student_id', student_id);
+  }
+  else if (staff_id) {
+    query = query.eq('staff_id', staff_id);
+  } else {
+    return res.status(400).json({ error: 'Missing user ID' });
   }
 
+  const { error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
   res.json({ message: 'Selection removed' });
 });
 
@@ -430,6 +440,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+
 app.post('/api/register', async (req, res) => {
   const {
     firstName,
@@ -444,6 +455,44 @@ app.post('/api/register', async (req, res) => {
   const full_name = `${firstName} ${lastName}`.trim();
 
   try {
+    
+    const { data: existEmail } = await supabase
+      .from('users')
+      .select('email')
+      .eq('email', email)
+      .single()
+
+    if (existEmail) {
+      return res.status(400).json({
+        message: 'Email is already registered'
+      })
+    }
+    if (role === 'student') {
+      const { data: existStudent } = await supabase
+        .from('users')
+        .select('student_id')
+        .eq('student_id', studentId)
+        .single()
+
+      if (existStudent) {
+        return res.status(400).json({
+          message: 'This student ID is already registered'
+        })
+      }
+    }
+    if (role === 'teacher') {
+      const { data: existStaff } = await supabase
+        .from('users')
+        .select('staff_id')
+        .eq('staff_id', staffId)
+        .single()
+
+      if (existStaff) {
+        return res.status(400).json({
+          message: 'This staff ID is already registered'
+        })
+      }
+    }
     const { data, error } = await supabase
       .from('users')
       .insert([{
@@ -463,10 +512,12 @@ app.post('/api/register', async (req, res) => {
     }
 
     res.status(201).json({ success: true, user: data[0] });
+
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 app.get('/api/user', async (req, res) => {
   const { id } = req.query
