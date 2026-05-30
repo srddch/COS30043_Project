@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, inject, onMounted } from 'vue'
-import { supabase } from '../../lib/supabase'
+import api from '../../services/api'
 import { selectionStore } from '../../store/selection'
 
 const notify = inject('notify', () => {})
@@ -53,49 +53,41 @@ async function loadData() {
 }
 
 async function loadCourses() {
-  const { data, error } = await supabase
-    .from('courses')
-    .select('id, code, desc, cp, type')
-    .order('id', { ascending: true })
-
-  if (error) {
+  try {
+    const res = await api.get('/courses')
+    const data = Array.isArray(res.data) ? res.data : []
+    courses.value = data
+      .map(course => ({
+        ...course,
+        desc: course.desc || course.course_title,
+        type: course.type || course.category,
+        cp: course.cp || course.credits
+      }))
+      .sort((a, b) => Number(a.id) - Number(b.id))
+  } catch (error) {
     console.error(error)
     notify('Failed to load courses', 'bg-danger')
-    return
   }
-
-  courses.value = data || []
 }
 
 async function loadFavourites() {
-  const { data, error } = await supabase
-    .from('favourites')
-    .select('*')
-    .eq('user_id', currentUserId)
-
-  if (error) {
+  try {
+    const res = await api.get('/favourites', { params: { user_id: currentUserId } })
+    favourites.value = res.data || []
+  } catch (error) {
     console.error(error)
     notify('Failed to load favourites', 'bg-danger')
-    return
   }
-
-  favourites.value = data || []
 }
 
 async function loadSchedule() {
-  const { data, error } = await supabase
-    .from('social_schedules')
-    .select('*')
-    .eq('user_id', currentUserId)
-    .order('id', { ascending: true })
-
-  if (error) {
+  try {
+    const res = await api.get('/social-schedules', { params: { user_id: currentUserId } })
+    schedule.value = res.data || []
+  } catch (error) {
     console.error(error)
     notify('Failed to load schedule', 'bg-danger')
-    return
   }
-
-  schedule.value = data || []
 }
 
 function getCourse(courseId) {
@@ -121,8 +113,8 @@ const scheduleCourses = computed(() => {
     return {
       ...item,
       courseCode: course ? course.code : 'Unknown',
-      courseTitle: course ? course.desc : 'Unknown Course',
-      courseType: course ? course.type : 'Unknown'
+      courseTitle: course ? (course.desc || course.course_title) : 'Unknown Course',
+      courseType: course ? (course.type || course.category) : 'Unknown'
     }
   })
 })
@@ -151,10 +143,13 @@ async function generateSchedule() {
     return
   }
 
-  await supabase
-    .from('social_schedules')
-    .delete()
-    .eq('user_id', currentUserId)
+  try {
+    await api.delete('/social-schedules', { params: { user_id: currentUserId } })
+  } catch (error) {
+    console.error(error)
+    notify('Failed to generate schedule', 'bg-danger')
+    return
+  }
 
   const newSchedule = []
 
@@ -177,11 +172,16 @@ async function generateSchedule() {
     })
   })
 
-  const { error } = await supabase
-    .from('social_schedules')
-    .insert(newSchedule)
-
-  if (error) {
+  try {
+    await api.post('/social-schedules/bulk', {
+      user_id: currentUserId,
+      items: newSchedule.map(item => ({
+        course_id: item.course_id,
+        day: item.day,
+        time_slot: item.time_slot
+      }))
+    })
+  } catch (error) {
     console.error(error)
     notify('Failed to generate schedule', 'bg-danger')
     return
@@ -197,12 +197,9 @@ async function clearSchedule() {
     return
   }
 
-  const { error } = await supabase
-    .from('social_schedules')
-    .delete()
-    .eq('user_id', currentUserId)
-
-  if (error) {
+  try {
+    await api.delete('/social-schedules', { params: { user_id: currentUserId } })
+  } catch (error) {
     console.error(error)
     notify('Failed to clear schedule', 'bg-danger')
     return

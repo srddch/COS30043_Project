@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { supabase } from '../../lib/supabase'
+import api from '../../services/api'
 
 const user = JSON.parse(localStorage.getItem('user'))
 const currentUserId = user ? String(user.id) : null
@@ -21,29 +21,19 @@ async function loadDashboardData() {
     return
   }
 
-  const { data: likesData, error: likesError } = await supabase
-    .from('likes')
-    .select('*')
-    .eq('user_id', currentUserId)
+  try {
+    const [likesRes, favouritesRes, ratingsRes] = await Promise.all([
+      api.get('/likes', { params: { user_id: currentUserId } }),
+      api.get('/favourites', { params: { user_id: currentUserId } }),
+      api.get('/ratings', { params: { user_id: currentUserId } })
+    ])
 
-  const { data: favouritesData, error: favouritesError } = await supabase
-    .from('favourites')
-    .select('*')
-    .eq('user_id', currentUserId)
-
-  const { data: ratingsData, error: ratingsError } = await supabase
-    .from('ratings')
-    .select('*')
-    .eq('user_id', currentUserId)
-
-  if (likesError || favouritesError || ratingsError) {
-    console.error(likesError || favouritesError || ratingsError)
-    return
+    likes.value = likesRes.data || []
+    favourites.value = favouritesRes.data || []
+    ratings.value = ratingsRes.data || []
+  } catch (err) {
+    console.error(err)
   }
-
-  likes.value = likesData || []
-  favourites.value = favouritesData || []
-  ratings.value = ratingsData || []
 }
 
 const myLikes = computed(() => likes.value)

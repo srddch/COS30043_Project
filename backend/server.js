@@ -32,6 +32,195 @@ app.get('/api/courses', async (req, res) => {
   res.json(data)
 })
 
+app.get('/api/likes', async (req, res) => {
+  const { user_id } = req.query
+  if (!user_id) return res.status(400).json({ error: 'user_id is required' })
+
+  const { data, error } = await supabase
+    .from('likes')
+    .select('*')
+    .eq('user_id', String(user_id))
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json(data || [])
+})
+
+app.post('/api/likes', async (req, res) => {
+  const { user_id, course_id } = req.body
+  if (!user_id || !course_id) {
+    return res.status(400).json({ error: 'user_id and course_id are required' })
+  }
+
+  const { data, error } = await supabase
+    .from('likes')
+    .insert([{ user_id: String(user_id), course_id }])
+    .select()
+    .single()
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.status(201).json(data)
+})
+
+app.delete('/api/likes', async (req, res) => {
+  const { user_id, course_id } = req.query
+  if (!user_id || !course_id) {
+    return res.status(400).json({ error: 'user_id and course_id are required' })
+  }
+
+  const { error } = await supabase
+    .from('likes')
+    .delete()
+    .eq('user_id', String(user_id))
+    .eq('course_id', course_id)
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ message: 'Like removed' })
+})
+
+app.get('/api/favourites', async (req, res) => {
+  const { user_id } = req.query
+  if (!user_id) return res.status(400).json({ error: 'user_id is required' })
+
+  const { data, error } = await supabase
+    .from('favourites')
+    .select('*')
+    .eq('user_id', String(user_id))
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json(data || [])
+})
+
+app.post('/api/favourites', async (req, res) => {
+  const { user_id, course_id } = req.body
+  if (!user_id || !course_id) {
+    return res.status(400).json({ error: 'user_id and course_id are required' })
+  }
+
+  const { data, error } = await supabase
+    .from('favourites')
+    .insert([{ user_id: String(user_id), course_id }])
+    .select()
+    .single()
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.status(201).json(data)
+})
+
+app.delete('/api/favourites', async (req, res) => {
+  const { user_id, course_id } = req.query
+  if (!user_id || !course_id) {
+    return res.status(400).json({ error: 'user_id and course_id are required' })
+  }
+
+  const { error } = await supabase
+    .from('favourites')
+    .delete()
+    .eq('user_id', String(user_id))
+    .eq('course_id', course_id)
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ message: 'Favourite removed' })
+})
+
+app.get('/api/ratings', async (req, res) => {
+  const { user_id } = req.query
+  if (!user_id) return res.status(400).json({ error: 'user_id is required' })
+
+  const { data, error } = await supabase
+    .from('ratings')
+    .select('*')
+    .eq('user_id', String(user_id))
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json(data || [])
+})
+
+app.post('/api/ratings', async (req, res) => {
+  const { user_id, course_id, rating } = req.body
+  if (!user_id || !course_id || rating === undefined || rating === null) {
+    return res.status(400).json({ error: 'user_id, course_id and rating are required' })
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from('ratings')
+    .select('*')
+    .eq('user_id', String(user_id))
+    .eq('course_id', course_id)
+    .maybeSingle()
+
+  if (existingError) return res.status(500).json({ error: existingError.message })
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from('ratings')
+      .update({ rating })
+      .eq('id', existing.id)
+      .select()
+      .single()
+
+    if (error) return res.status(500).json({ error: error.message })
+    return res.json(data)
+  }
+
+  const { data, error } = await supabase
+    .from('ratings')
+    .insert([{ user_id: String(user_id), course_id, rating }])
+    .select()
+    .single()
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.status(201).json(data)
+})
+
+app.get('/api/social-schedules', async (req, res) => {
+  const { user_id } = req.query
+  if (!user_id) return res.status(400).json({ error: 'user_id is required' })
+
+  const { data, error } = await supabase
+    .from('social_schedules')
+    .select('*')
+    .eq('user_id', String(user_id))
+    .order('id', { ascending: true })
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json(data || [])
+})
+
+app.delete('/api/social-schedules', async (req, res) => {
+  const { user_id } = req.query
+  if (!user_id) return res.status(400).json({ error: 'user_id is required' })
+
+  const { error } = await supabase
+    .from('social_schedules')
+    .delete()
+    .eq('user_id', String(user_id))
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ message: 'Schedule cleared' })
+})
+
+app.post('/api/social-schedules/bulk', async (req, res) => {
+  const { user_id, items } = req.body
+  if (!user_id || !Array.isArray(items)) {
+    return res.status(400).json({ error: 'user_id and items[] are required' })
+  }
+
+  const payload = items.map(item => ({
+    user_id: String(user_id),
+    course_id: item.course_id,
+    day: item.day,
+    time_slot: item.time_slot
+  }))
+
+  const { data, error } = await supabase
+    .from('social_schedules')
+    .insert(payload)
+    .select()
+
+  if (error) return res.status(500).json({ error: error.message })
+  res.status(201).json(data || [])
+})
+
 // Get all forum posts
 app.get('/api/forum-posts', async (req, res) => {
   const { data, error } = await supabase

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { supabase } from '../../lib/supabase'
+import api from '../../services/api'
 
 const user = JSON.parse(localStorage.getItem('user'))
 const currentUserId = user ? String(user.id) : null
@@ -17,17 +17,13 @@ async function loadRatings() {
     return
   }
 
-  const { data, error } = await supabase
-    .from('ratings')
-    .select('*')
-    .eq('user_id', currentUserId)
-
-  if (error) {
-    console.error(error)
-    return
+  try {
+    const res = await api.get('/ratings', { params: { user_id: currentUserId } })
+    ratings.value = res.data || []
+  } catch (err) {
+    console.error(err)
+    ratings.value = []
   }
-
-  ratings.value = data || []
 }
 
 const myRatings = computed(() => {

@@ -1,13 +1,13 @@
 import { reactive } from 'vue'
 import api from '../services/api'
 
-// 这是“我的选课(My Selection)”的全局状态。
-// 作用：让 Course Catalogue / My Selection / Schedule Generator 都能共享同一份“已选课程”数据。
-// 数据来源：通过 src/services/api.js 访问后端 Express API，再由后端读写 Supabase。
+// 这是“我的选课”的全局状态。
+// 作用：让我的各个页面都能共享同一份数据。
+// 数据来源：通过 api 访问后端 Express API，再由后端读写 Supabase。
 export const selectionStore = reactive({
-  // 当前用户已选择(Enroll)的课程列表（从后端读取）。
+  // 当前用户已选择的课程列表（从后端读取）。
   enrolledUnits: [],
-  // 页面用的加载状态（例如 My Selection 页面显示 loading spinner）。
+  // 页面用的加载状态。
   loading: false,
 
   // 从 localStorage 取当前登录用户信息（登录模块写入）。

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, inject, onMounted } from 'vue'
 import { getTemplates } from '../../store/social'
-import { supabase } from '../../lib/supabase'
+import api from '../../services/api'
 
 const notify = inject('notify', () => {})
 
@@ -35,30 +35,20 @@ async function loadSocialData() {
     return
   }
 
-  const { data: likesData, error: likesError } = await supabase
-    .from('likes')
-    .select('*')
-    .eq('user_id', currentUserId)
+  try {
+    const [likesRes, favouritesRes, ratingsRes] = await Promise.all([
+      api.get('/likes', { params: { user_id: currentUserId } }),
+      api.get('/favourites', { params: { user_id: currentUserId } }),
+      api.get('/ratings', { params: { user_id: currentUserId } })
+    ])
 
-  const { data: favouritesData, error: favouritesError } = await supabase
-    .from('favourites')
-    .select('*')
-    .eq('user_id', currentUserId)
-
-  const { data: ratingsData, error: ratingsError } = await supabase
-    .from('ratings')
-    .select('*')
-    .eq('user_id', currentUserId)
-
-  if (likesError || favouritesError || ratingsError) {
-    console.error(likesError || favouritesError || ratingsError)
+    likes.value = likesRes.data || []
+    favourites.value = favouritesRes.data || []
+    ratings.value = ratingsRes.data || []
+  } catch (err) {
+    console.error(err)
     notify('Failed to load social data', 'bg-danger')
-    return
   }
-
-  likes.value = likesData || []
-  favourites.value = favouritesData || []
-  ratings.value = ratingsData || []
 }
 
 function isLiked(courseId) {
@@ -71,7 +61,7 @@ function isFavourited(courseId) {
 
 function myRating(courseId) {
   const rating = ratings.value.find(item => item.course_id === courseId)
-  return rating ? rating.rating : 0
+  return rating ? Number(rating.rating || 0) : 0
 }
 
 function averageRating(courseId) {
@@ -92,36 +82,23 @@ async function handleLike(item) {
   }
 
   if (isLiked(item.id)) {
-    const { error } = await supabase
-      .from('likes')
-      .delete()
-      .eq('user_id', currentUserId)
-      .eq('course_id', item.id)
-
-    if (error) {
+    try {
+      await api.delete('/likes', { params: { user_id: currentUserId, course_id: item.id } })
+      notify('Like removed', 'bg-success')
+    } catch (error) {
       console.error(error)
       notify('Failed to remove like', 'bg-danger')
       return
     }
-
-    notify('Like removed from database', 'bg-success')
   } else {
-    const { error } = await supabase
-      .from('likes')
-      .insert([
-        {
-          user_id: currentUserId,
-          course_id: item.id
-        }
-      ])
-
-    if (error) {
+    try {
+      await api.post('/likes', { user_id: currentUserId, course_id: item.id })
+      notify('Like saved', 'bg-success')
+    } catch (error) {
       console.error(error)
       notify('Failed to save like', 'bg-danger')
       return
     }
-
-    notify('Like saved to database', 'bg-success')
   }
 
   await loadSocialData()
@@ -134,36 +111,23 @@ async function handleFavourite(item) {
   }
 
   if (isFavourited(item.id)) {
-    const { error } = await supabase
-      .from('favourites')
-      .delete()
-      .eq('user_id', currentUserId)
-      .eq('course_id', item.id)
-
-    if (error) {
+    try {
+      await api.delete('/favourites', { params: { user_id: currentUserId, course_id: item.id } })
+      notify('Favourite removed', 'bg-success')
+    } catch (error) {
       console.error(error)
       notify('Failed to remove favourite', 'bg-danger')
       return
     }
-
-    notify('Favourite removed from database', 'bg-success')
   } else {
-    const { error } = await supabase
-      .from('favourites')
-      .insert([
-        {
-          user_id: currentUserId,
-          course_id: item.id
-        }
-      ])
-
-    if (error) {
+    try {
+      await api.post('/favourites', { user_id: currentUserId, course_id: item.id })
+      notify('Favourite saved', 'bg-success')
+    } catch (error) {
       console.error(error)
       notify('Failed to save favourite', 'bg-danger')
       return
     }
-
-    notify('Favourite saved to database', 'bg-success')
   }
 
   await loadSocialData()
@@ -175,42 +139,13 @@ async function handleRate(item, score) {
     return
   }
 
-  const existingRating = ratings.value.find(
-    rating => rating.course_id === item.id
-  )
-
-  if (existingRating) {
-    const { error } = await supabase
-      .from('ratings')
-      .update({ rating: score })
-      .eq('user_id', currentUserId)
-      .eq('course_id', item.id)
-
-    if (error) {
-      console.error(error)
-      notify('Failed to update rating', 'bg-danger')
-      return
-    }
-
-    notify('Rating updated in database', 'bg-warning')
-  } else {
-    const { error } = await supabase
-      .from('ratings')
-      .insert([
-        {
-          user_id: currentUserId,
-          course_id: item.id,
-          rating: score
-        }
-      ])
-
-    if (error) {
-      console.error(error)
-      notify('Failed to save rating', 'bg-danger')
-      return
-    }
-
-    notify('Rating saved to database', 'bg-warning')
+  try {
+    await api.post('/ratings', { user_id: currentUserId, course_id: item.id, rating: score })
+    notify('Rating updated', 'bg-warning')
+  } catch (error) {
+    console.error(error)
+    notify('Failed to update rating', 'bg-danger')
+    return
   }
 
   await loadSocialData()
