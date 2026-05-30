@@ -3,17 +3,26 @@ import { ref, computed, onMounted, inject } from 'vue'
 import api from '../../services/api'
 import { selectionStore } from '../../store/selection'
 
-onMounted(async () => {
-  await selectionStore.fetchSelections() 
-})
 const notify = inject('notify')
 
+// 进入课程目录页时，先拉取“我的已选课程”，
+// 这样左侧列表才能正确显示每门课是否已 Enroll（badge/按钮状态）。
+onMounted(async () => {
+  await selectionStore.fetchSelections()
+})
+
+// 课程列表（从后端 /api/courses 获取），以及页面 UI 状态
 const units = ref([])
 const loading = ref(true)
+
+// 右侧详情面板当前选中的课程
 const selectedUnit = ref(null)
+
+// 搜索/筛选条件（通过 computed 实时过滤列表）
 const searchQuery = ref('')
 const categoryFilter = ref('all')
 
+// 从后端加载全部课程数据
 const fetchUnits = async () => {
   loading.value = true
   try {
@@ -34,12 +43,14 @@ const categories = [
   { value: 'Systems Analysis', label: 'Systems Analysis' }
 ]
 
+// filteredUnits：根据搜索关键字 + 分类筛选得到“当前要展示”的课程列表
+// 这里用 computed 的好处：searchQuery / categoryFilter / units 任意变化，列表会自动更新。
 const filteredUnits = computed(() => {
   let result = [...units.value]
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
-    result = result.filter(unit => 
+    result = result.filter(unit =>
       unit.code.toLowerCase().includes(query) ||
       unit.course_title.toLowerCase().includes(query) ||
       unit.desc.toLowerCase().includes(query)
@@ -66,6 +77,9 @@ const selectUnit = (unit) => {
   selectedUnit.value = unit
 }
 
+// 点击按钮 Enroll/Remove：
+// 1) 调 selectionStore.toggleEnroll 走后端写入/删除
+// 2) 根据返回结果弹全局 Toast（provide/inject 的 notify）
 const handleEnroll = async (unit) => {
   const result = await selectionStore.toggleEnroll(unit)
   if (result.success) {

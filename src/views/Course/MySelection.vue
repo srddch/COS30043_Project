@@ -1,27 +1,35 @@
 <script setup>
-import { computed, inject } from 'vue'
+import { computed, inject, watch } from 'vue'
 import { selectionStore } from '../../store/selection'
-import { watch } from 'vue'
 import { useUser } from '../User/composables/useUser.js'
 
-// Chart.js imports
+// Advanced Feature：Chart.js（通过 vue-chartjs 组件封装）
 import { Pie } from 'vue-chartjs'
 import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale } from 'chart.js'
 
+// Chart.js 需要显式注册图表组件/插件，否则 Pie 图不会渲染
 ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale)
-
-const { user } = useUser()
-
-watch(user, () => {
-  selectionStore.fetchSelections()
-}, { immediate: true })
 
 const notify = inject('notify')
 
+// 监听登录用户变化：
+// - 用户刚登录/退出时，自动重新拉取“我的选课”
+// - immediate: true 表示页面首次进入就会执行一次 fetchSelections
+const { user } = useUser()
+watch(
+  user,
+  () => {
+    selectionStore.fetchSelections()
+  },
+  { immediate: true }
+)
+
+// 从全局 selectionStore 读取状态
 const enrolledUnits = computed(() => selectionStore.enrolledUnits)
 const isLoading = computed(() => selectionStore.loading)
 
-// Chart Data for Selected Units
+// 图表数据：用 computed 统计每个分类的数量
+// 关键点：enrolledUnits 变化 -> chartData 自动重新计算 -> Pie 组件自动更新（不需要手动刷新）
 const chartData = computed(() => {
   const coreCount = enrolledUnits.value.filter(u => u.category === 'Core').length
   const softwareCount = enrolledUnits.value.filter(u => u.category === 'Software Development').length
@@ -48,6 +56,8 @@ const chartOptions = {
   }
 }
 
+// Remove 按钮：复用 selectionStore.toggleEnroll 逻辑（已选 -> 删除）
+// 调用链：MySelection.vue -> selectionStore.toggleEnroll -> api.delete -> backend -> Supabase
 const handleRemove = async (unit) => {
   const result = await selectionStore.toggleEnroll(unit)
   if (result.success) {

@@ -68,6 +68,7 @@
 <script setup>
 import { ref, reactive, inject } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '../../services/api.js'
 
 const router = useRouter()
 const notify = inject('notify')
@@ -125,29 +126,20 @@ const handleLogin = async () => {
   loading.value = true
 
   try {
-    const res = await fetch('http://localhost:3000/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email.value,
-        password: password.value
-      })
+    const res = await api.post('/login', {
+      email: email.value,
+      password: password.value
     })
 
-    const user = await res.json()
-
-    if (!res.ok) {
-      throw new Error(user.message || 'Login failed')
-    }
+    const user = res.data
 
     localStorage.setItem('user', JSON.stringify(user))
     notify('Login successful', 'bg-success')
     router.push('/')
-  } 
-  catch (err) {
-    notify(err.message, 'bg-danger')
-  } 
-  finally {
+  } catch (err) {
+    const msg = err?.response?.data?.message || err?.message || 'Login failed'
+    notify(msg, 'bg-danger')
+  } finally {
     loading.value = false
   }
 }

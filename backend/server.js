@@ -339,25 +339,25 @@ app.delete('/api/tasks/:id', async (req, res) => {
 
   res.json({ message: 'Task deleted successfully' })
 })
-// --- Selections API ---
+// --- Selections API (Course Module) ---
+// 这组接口用于“选课/取消选课”，对应 Supabase 表：selections
+// 设计要点：
+// - 前端会带上 student_id 或 staff_id，用于只操作“当前用户自己的”选课数据
+// - 返回 JSON 给前端，前端再用 selectionStore 驱动 UI（列表 badge、My Selection、Schedule Generator）
 
-// Get all selected units
+// Get all selected units (Read)
 app.get('/api/selections', async (req, res) => {
   const { student_id, staff_id } = req.query;
 
   try {
     let query = supabase.from('selections').select('*');
 
-  
+    // 只允许按身份过滤（避免返回所有人的 selections）
     if (student_id) {
       query = query.eq('student_id', student_id);
-    }
-   
-    else if (staff_id) {
+    } else if (staff_id) {
       query = query.eq('staff_id', staff_id);
-    }
-   
-    else {
+    } else {
       return res.json([]);
     }
 
@@ -369,14 +369,17 @@ app.get('/api/selections', async (req, res) => {
   }
 });
 
+// Add a unit to selection (Create)
 app.post('/api/selections', async (req, res) => {
   const data = req.body;
 
+  // 必须带用户归属字段，否则无法知道这条 selection 属于谁
   if (!data.student_id && !data.staff_id) {
     return res.status(400).json({ error: 'student_id or staff_id is required' });
   }
 
   try {
+    // 字段白名单：只写入 selections 表需要的列，避免前端传多余字段导致插入失败
     const { data: result, error } = await supabase
       .from('selections')
       .insert([{
@@ -387,8 +390,8 @@ app.post('/api/selections', async (req, res) => {
         credits: data.credits,
         semester_offered: data.semester_offered,
         desc: data.desc,
-        student_id: data.student_id ?? null,  
-        staff_id: data.staff_id ?? null       
+        student_id: data.student_id ?? null,
+        staff_id: data.staff_id ?? null
       }])
       .select();
 
@@ -399,16 +402,17 @@ app.post('/api/selections', async (req, res) => {
   }
 });
 
+// Remove a unit from selection (Delete)
 app.delete('/api/selections/:code', async (req, res) => {
   const { code } = req.params;
   const { student_id, staff_id } = req.query;
 
+  // 同时按 code + 用户归属字段删除，避免误删其他用户的选课
   let query = supabase.from('selections').delete().eq('code', code);
 
   if (student_id) {
     query = query.eq('student_id', student_id);
-  }
-  else if (staff_id) {
+  } else if (staff_id) {
     query = query.eq('staff_id', staff_id);
   } else {
     return res.status(400).json({ error: 'Missing user ID' });

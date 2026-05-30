@@ -126,6 +126,7 @@
 <script setup>
 import { ref, reactive, inject } from 'vue'
 import { useRouter } from 'vue-router'
+import api from '../../services/api.js'
 
 const router = useRouter()
 const notify = inject('notify')
@@ -237,35 +238,22 @@ const handleRegister = async () => {
   loading.value = true
 
   try {
-    const res = await fetch('http://localhost:3000/api/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        firstName: firstName.value,
-        lastName: lastName.value,
-        email: email.value,
-        password: password.value,
-        role: role.value,
-        studentId: role.value === 'student' ? studentId.value : null,
-        staffId: role.value === 'teacher' ? staffId.value : null
-      })
+    await api.post('/register', {
+      firstName: firstName.value,
+      lastName: lastName.value,
+      email: email.value,
+      password: password.value,
+      role: role.value,
+      studentId: role.value === 'student' ? studentId.value : null,
+      staffId: role.value === 'teacher' ? staffId.value : null
     })
-
-    const data = await res.json()
-
-    if (!res.ok) {
-      throw new Error(data.message || 'Registration failed')
-    }
 
     notify('Registered successfully!', 'bg-success')
     router.push('/login')
-  } 
-  catch (err) {
-    notify(err.message, 'bg-danger')
-  } 
-  finally {
+  } catch (err) {
+    const msg = err?.response?.data?.message || err?.message || 'Registration failed'
+    notify(msg, 'bg-danger')
+  } finally {
     loading.value = false
   }
 }
