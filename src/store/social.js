@@ -1,8 +1,6 @@
-import { supabase } from '../lib/supabase'
+import api from '../services/api'
 
 const STORAGE_KEY = 'smartcanvas_social_data'
-
-
 
 const defaultData = {
   likes: [],
@@ -19,24 +17,22 @@ function loadData() {
 function saveData(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
 }
-export async function getTemplates() {
-  const { data, error } = await supabase
-    .from('courses')
-    .select('id, code, desc, cp, type')
-    .order('id', { ascending: true })
 
-  if (error) {
+export async function getTemplates() {
+  try {
+    const response = await api.get('/courses')
+
+    return response.data.map(course => ({
+      id: course.id,
+      title: course.desc || course.course_title,
+      code: course.code,
+      type: course.type || course.category,
+      cp: course.cp || course.credits
+    }))
+  } catch (error) {
     console.error('Failed to load courses:', error)
     return []
   }
-
-  return data.map(course => ({
-    id: course.id,
-    title: course.desc,
-    code: course.code,
-    type: course.type,
-    cp: course.cp
-  }))
 }
 
 export function getSocialData() {
